@@ -20,7 +20,7 @@ from .masking import get_spectrum_mask
 from .activity import true_h_centroid, true_k_centroid
 
 __all__ = ["EchelleSpectrum", "slice_spectrum", "interpolate_spectrum",
-           "cross_corr"]
+           "cross_corr", "Spectrum1D", "SimpleSpectrum", "concatenate_spectra"]
 
 
 class Spectrum1D(Spec1D):
@@ -29,7 +29,7 @@ class Spectrum1D(Spec1D):
 
     Adds a plot method.
     """
-    def plot(self, ax=None, normed=True, flux_offset=0, **kwargs):
+    def plot(self, ax=None, normed=False, flux_offset=0, **kwargs):
         """
         Plot the spectrum.
 
@@ -322,6 +322,52 @@ class EchelleSpectrum(object):
         return rv_shift
 
 
+class SimpleSpectrum(object):
+    def __init__(self, wavelength, flux, dispersion_unit=None):
+        if hasattr(wavelength, 'unit'):
+            if not len(str(wavelength.unit)) == 0:
+                self.wavelength = wavelength
+                self.wavelength_unit = self.wavelength.unit
+            else:
+                self.wavelength = wavelength * u.Angstrom
+                self.wavelength_unit = u.Angstrom
+        else:
+            self.wavelength = wavelength * dispersion_unit
+            self.wavelength_unit = dispersion_unit
+
+        self.flux = flux
+        self.dispersion_unit = dispersion_unit
+
+        self.masked_wavelength = self.wavelength
+        self.masked_flux = self.flux
+
+    def plot(self, ax=None, normed=False, flux_offset=0, **kwargs):
+        """
+        Plot the spectrum.
+
+        Parameters
+        ----------
+        ax : `~matplotlib.axes.Axes` (optional)
+            The `~matplotlib.axes.Axes` to draw on, if provided.
+        kwargs
+            All other keyword arguments are passed to `~matplotlib.pyplot.plot`
+
+        """
+        if ax is None:
+            ax = plt.gca()
+
+        flux_80th_percentile = np.percentile(self.masked_flux, 80)
+
+        if normed:
+            flux = self.masked_flux / flux_80th_percentile
+        else:
+            flux = self.masked_flux
+
+        ax.plot(self.masked_wavelength, flux + flux_offset, **kwargs)
+        ax.set_xlim([self.masked_wavelength.value.min(),
+                     self.masked_wavelength.value.max()])
+
+
 def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None):
     """
     Return a slice of a spectrum on a smaller wavelength range.
@@ -340,7 +386,7 @@ def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None):
 
     Returns
     -------
-    sliced_spectrum : `Spectrum1D`
+    sliced_spectrum : `SimpleSpectrum`
     """
     in_range = ((spectrum.wavelength < max_wavelength) &
                 (spectrum.wavelength > min_wavelength))
@@ -352,8 +398,10 @@ def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None):
     else:
         flux = spectrum.flux[in_range] * norm / spectrum.flux[in_range].max()
 
-    return Spectrum1D.from_array(wavelength, flux,
-                                 dispersion_unit=spectrum.wavelength_unit)
+    # return Spectrum1D.from_array(wavelength, flux,
+    #                              dispersion_unit=spectrum.wavelength_unit)
+    return SimpleSpectrum(wavelength, flux,
+                          dispersion_unit=spectrum.wavelength_unit)
 
 
 def interpolate_spectrum(spectrum, new_wavelengths):
@@ -380,16 +428,16 @@ def interpolate_spectrum(spectrum, new_wavelengths):
     #     start_ind, end_ind = end_ind, start_ind
     #
     # return spectrum.slice_index(start_ind, end_ind)
-    sort_order = np.argsort(spectrum.masked_wavelength.to(u.Angstrom).value)
-    sorted_spectrum_wavelengths = spectrum.masked_wavelength.to(u.Angstrom).value[sort_order]
-    sorted_spectrum_fluxes = spectrum.masked_flux.value[sort_order]
+    #sort_order = np.argsort(spectrum.masked_wavelength.value)
+    sorted_spectrum_wavelengths = spectrum.masked_wavelength.value#[sort_order]
+    sorted_spectrum_fluxes = spectrum.masked_flux#[sort_order]
 
-    new_flux = np.interp(new_wavelengths.to(u.Angstrom).value,
+    new_flux = np.interp(new_wavelengths.value,
                          sorted_spectrum_wavelengths,
                          sorted_spectrum_fluxes)
 
-    return Spectrum1D.from_array(new_wavelengths, new_flux,
-                                 dispersion_unit=spectrum.wavelength_unit)
+    return SimpleSpectrum(new_wavelengths, new_flux,
+                          dispersion_unit=spectrum.wavelength_unit)
 
 
 def cross_corr(target_spectrum, model_spectrum, kernel_width):
@@ -416,7 +464,7 @@ def cross_corr(target_spectrum, model_spectrum, kernel_width):
     smoothed_model_flux = gaussian_filter1d(model_spectrum.masked_flux.value,
                                             kernel_width)
 
-    corr = np.correlate(target_spectrum.masked_flux.value,
+    corr = np.correlate(target_spectrum.masked_flux,
                         smoothed_model_flux, mode='same')
 
     max_corr_ind = np.argmax(corr)
@@ -430,4 +478,9 @@ def cross_corr(target_spectrum, model_spectrum, kernel_width):
     wavelength_shift = index_shift * delta_wavelength
     return wavelength_shift
 
+
+def concatenate_spectra(spectrum_list):
+    wavelength = np.concatenate([sp.wavelength.value for sp in spectrum_list])
+    flux = np.concatenate([sp.flux.value for sp in spectrum_list])
+    return SimpleSpectrum(u.Quantity(wavelength, u.Angstrom), flux)
 

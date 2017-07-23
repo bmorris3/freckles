@@ -1,15 +1,15 @@
-
 from __future__ import (absolute_import, division, print_function,
                         unicode_literals)
-
+import os
 import numpy as np
 from astropy.utils.data import download_file
 from astropy.io import fits
 import astropy.units as u
+from scipy.interpolate import RectBivariateSpline
 
-from specutils import Spectrum1D
 
-__all__ = ['get_phoenix_model_spectrum', 'phoenix_model_temps']
+__all__ = ['get_phoenix_model_spectrum', 'phoenix_model_temps',
+           'ModelGrid']
 
 
 phoenix_model_temps = np.array([3200, 6400, 14500, 4100, 12500, 5000, 6700,
@@ -73,8 +73,73 @@ def get_phoenix_model_spectrum(T_eff, log_g=4.5, cache=True):
          (57.362 - sigma_2))
     wavelengths_air = wavelengths_vacuum / f
 
+    from .spectra import Spectrum1D  # Prevent circular imports
+
     spectrum = Spectrum1D.from_array(wavelengths_air, fluxes,
                                      dispersion_unit=u.Angstrom)
 
     return spectrum
+
+
+def construct_model_grid(temp_min=3000, temp_max=6000):
+
+    tmp_model = get_phoenix_model_spectrum(4700)
+    test_temps = np.sort(phoenix_model_temps[(phoenix_model_temps < temp_max) &
+                                             (phoenix_model_temps > temp_min)])
+    all_models = np.zeros((tmp_model.flux.shape[0], len(test_temps)))
+    wavelengths = np.zeros(tmp_model.flux.shape[0])
+
+    for i, test_temp in enumerate(test_temps):
+        if i == 0:
+            wavelengths_order = np.argsort(tmp_model.wavelength)
+            wavelengths = tmp_model.wavelength[wavelengths_order]
+
+        each_model = get_phoenix_model_spectrum(test_temp, log_g=4.5, cache=True)
+        all_models[:, i] = each_model.flux[wavelengths_order]
+    return wavelengths, test_temps, all_models
+
+
+model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir,
+                                          'data', 'model_grid.npz'))
+
+
+class ModelGrid(object):
+    def __init__(self, path=model_path, temp_min=3000, temp_max=6000, splin_order=3):
+        if os.path.exists(path):
+            pickled_grid = np.load(path)
+
+            self.wavelengths = pickled_grid['wavelengths']
+            self.test_temps = pickled_grid['test_temps']
+            self.all_models = pickled_grid['all_models']
+
+        else:
+            wavelengths, test_temps, all_models = construct_model_grid(temp_min, temp_max)
+            np.savez(path, wavelengths=wavelengths.value, test_temps=test_temps,
+                     all_models=all_models)
+
+            self.wavelengths = wavelengths
+            self.test_temps = test_temps
+            self.all_models = all_models
+
+        self.interp = RectBivariateSpline(self.wavelengths, self.test_temps,
+                                          self.all_models, kx=splin_order, ky=splin_order)
+
+    def interp_reshape(self, lam, temp):
+        return self.interp(lam, temp)[:, 0]
+
+    def spectrum(self, temp):
+        """
+        Get a full resolution PHOENIX model spectrum interpolated from
+        the grid at temperature ``temp``
+        """
+
+        flux = self.interp_reshape(self.wavelengths, temp)
+
+        flux /= flux.max()
+
+        from .spectra import SimpleSpectrum
+
+        return SimpleSpectrum(self.wavelengths, flux,
+                              dispersion_unit=u.Angstrom)
+
 
