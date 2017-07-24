@@ -12,18 +12,18 @@ __all__ = ['get_phoenix_model_spectrum', 'phoenix_model_temps',
            'ModelGrid']
 
 
-phoenix_model_temps = np.array([3200, 6400, 14500, 4100, 12500, 5000, 6700,
-                                 10400, 2700, 11600, 3600, 7000, 7600, 4500,
-                                 10600, 5400, 5700, 3100, 7400, 10000, 4000,
-                                 6000, 4900, 8400, 7200, 2600, 6300, 15000,
-                                 3500, 4400, 6600, 9600, 13500, 5300, 7800,
-                                 3000, 6900, 9400, 3900, 12000, 4800, 5600,
-                                 2500, 9200, 8800, 3400, 5900, 4300, 8000,
-                                 9000, 5200, 6200, 9800, 2900, 13000, 3800,
-                                 6500, 11400, 14000, 4700, 2400, 6800, 8600,
-                                 3300, 4200, 5500, 11800, 5100, 11000, 10200,
-                                 2800, 5800, 3700, 8200, 10800, 4600, 6100,
-                                 2300, 11200])
+phoenix_model_temps = np.array([2300,  2400,  2500,  2600,  2700,  2800,  2900,
+                                3000,  3100, 3200,  3300,  3400,  3500,  3600,
+                                3700,  3800,  3900,  4000, 4100,  4200,  4300,
+                                4400,  4500,  4600,  4700,  4800,  4900, 5000,
+                                5100,  5200,  5300,  5400,  5500,  5600,  5700,
+                                5800, 5900,  6000,  6100,  6200,  6300,  6400,
+                                6500,  6600,  6700, 6800,  6900,  7000,  7200,
+                                7400,  7600,  7800,  8000,  8200, 8400,  8600,
+                                8800,  9000,  9200,  9400,  9600,  9800, 10000,
+                                10200, 10400, 10600, 10800, 11000, 11200, 11400,
+                                11600, 11800, 12000, 12500, 13000, 13500, 14000,
+                                14500, 15000])
 
 
 def get_url(T_eff, log_g):
@@ -73,9 +73,9 @@ def get_phoenix_model_spectrum(T_eff, log_g=4.5, cache=True):
          (57.362 - sigma_2))
     wavelengths_air = wavelengths_vacuum / f
 
-    from .spectra import Spectrum1D  # Prevent circular imports
+    from .spectra import SimpleSpectrum  # Prevent circular imports
 
-    spectrum = Spectrum1D.from_array(wavelengths_air, fluxes,
+    spectrum = SimpleSpectrum(wavelengths_air, fluxes,
                                      dispersion_unit=u.Angstrom)
 
     return spectrum
@@ -104,7 +104,8 @@ model_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir,
 
 
 class ModelGrid(object):
-    def __init__(self, path=model_path, temp_min=3000, temp_max=6000, splin_order=3):
+    def __init__(self, path=model_path, temp_min=3000, temp_max=6000,
+                 spline_order=1):
         if os.path.exists(path):
             pickled_grid = np.load(path)
 
@@ -122,7 +123,8 @@ class ModelGrid(object):
             self.all_models = all_models
 
         self.interp = RectBivariateSpline(self.wavelengths, self.test_temps,
-                                          self.all_models, kx=splin_order, ky=splin_order)
+                                          self.all_models, kx=spline_order,
+                                          ky=spline_order)
 
     def interp_reshape(self, lam, temp):
         return self.interp(lam, temp)[:, 0]

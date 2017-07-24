@@ -12,7 +12,9 @@ import astropy.units as u
 from astropy.time import Time
 from specutils.io import read_fits
 from specutils import Spectrum1D as Spec1D
-from scipy.ndimage import gaussian_filter1d
+from scipy.ndimage import gaussian_filter1d, convolve1d
+from scipy.signal import gaussian
+from scipy.interpolate import interp1d
 
 from .spectral_type import query_for_T_eff
 from .phoenix import get_phoenix_model_spectrum
@@ -21,6 +23,11 @@ from .activity import true_h_centroid, true_k_centroid
 
 __all__ = ["EchelleSpectrum", "slice_spectrum", "interpolate_spectrum",
            "cross_corr", "Spectrum1D", "SimpleSpectrum", "concatenate_spectra"]
+
+
+approx_resolution_ratio = 6.4122026154034
+smoothing_kernel = gaussian(int(5*approx_resolution_ratio),
+                            approx_resolution_ratio)
 
 
 class Spectrum1D(Spec1D):
@@ -323,7 +330,8 @@ class EchelleSpectrum(object):
 
 
 class SimpleSpectrum(object):
-    def __init__(self, wavelength, flux, dispersion_unit=None):
+    def __init__(self, wavelength, flux, dispersion_unit=None,
+                 splits=None):
         if hasattr(wavelength, 'unit'):
             if not len(str(wavelength.unit)) == 0:
                 self.wavelength = wavelength
@@ -340,6 +348,23 @@ class SimpleSpectrum(object):
 
         self.masked_wavelength = self.wavelength
         self.masked_flux = self.flux
+        self._splits = splits
+
+    @property
+    def wavelength_splits(self):
+        if self._splits is None:
+            diffs = np.diff(self.wavelength.value)
+            split_ind_bools = (3 * np.abs(np.median(diffs)) < np.abs(diffs))
+            split_inds = np.concatenate([[0],
+                                         np.arange(len(split_ind_bools))[split_ind_bools] + 1,
+                                         [len(split_ind_bools)+1]])
+
+            splits = []
+            for i in range(len(split_inds)-1):
+                i_min, i_max = split_inds[i], split_inds[i+1]
+                splits.append([i_min, i_max])
+            self._splits = np.array(splits)
+        return self._splits
 
     def plot(self, ax=None, normed=False, flux_offset=0, **kwargs):
         """
@@ -367,6 +392,28 @@ class SimpleSpectrum(object):
         ax.set_xlim([self.masked_wavelength.value.min(),
                      self.masked_wavelength.value.max()])
 
+    def convolve(self, kernel=smoothing_kernel):
+        convolved_flux = convolve1d(self.flux, kernel)
+        self.flux = convolved_flux/np.median(convolved_flux)
+
+    def interpolate(self, new_wavelengths, copy=False, assume_sorted=True):
+        interp_function = interp1d(self.wavelength.value, self.flux, copy=copy,
+                                   assume_sorted=assume_sorted,
+                                   fill_value='extrapolate')
+        new_flux = interp_function(new_wavelengths.value)
+
+        return new_flux
+
+    def slice(self, min_wavelength, max_wavelength):
+        in_range = ((self.wavelength.value < max_wavelength) &
+                    (self.wavelength.value > min_wavelength))
+        self.flux = np.compress(in_range, self.flux)
+        self.wavelength = np.compress(in_range, self.wavelength.value)
+        #
+        # return self.__class__.__init__(np.compress(in_range, self.flux),
+        #                                np.compress(in_range, self.wavelength),
+        #                                dispersion_unit=self.wavelength.unit)
+        #
 
 def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None):
     """
