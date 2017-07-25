@@ -3,22 +3,22 @@ from __future__ import (absolute_import, division, print_function,
 
 import numpy as np
 import astropy.units as u
+from scipy.signal import gaussian
+
 from .spectra import SimpleSpectrum
 
 __all__ = ["instr_model", "combine_spectra"]
 
 
-def instr_model(temp_phot, temp_spot, spotted_area, lam_offset,
+def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
                 observed_spectrum, model_grid):
+
+    # Kernel for instrumental broadening profile:
+    kernel = gaussian(int(5*res), res)
 
     # from .spectra import slice_spectrum
     lam_min = observed_spectrum.wavelength.min().value
     lam_max = observed_spectrum.wavelength.max().value
-
-    # model_phot = slice_spectrum(model_grid.spectrum(temp_phot),
-    #                             lam_min, lam_max)
-    # model_spot = slice_spectrum(model_grid.spectrum(temp_spot),
-    #                             lam_min, lam_max)
 
     model_phot = model_grid.spectrum(temp_phot)
     model_phot.slice(lam_min, lam_max)
@@ -26,19 +26,19 @@ def instr_model(temp_phot, temp_spot, spotted_area, lam_offset,
     model_spot.slice(lam_min, lam_max)
 
     combined_spectrum = combine_spectra(model_phot, model_spot, spotted_area)
-    combined_spectrum.convolve()
+    combined_spectrum.convolve(kernel=kernel)
     combined_interp = combined_spectrum.interpolate(observed_spectrum.wavelength -
                                                     lam_offset*u.Angstrom)
 
-    c, residuals = np.linalg.lstsq(combined_interp[:, np.newaxis],
-                                   observed_spectrum.flux[:, np.newaxis])[0:2]
+    combined_scaled = combined_interp.copy()
+    residuals = 0
+    for i_min, i_max in observed_spectrum.wavelength_splits:
+        c, residuals_i = np.linalg.lstsq(combined_interp[i_min:i_max, np.newaxis],
+                                       observed_spectrum.flux[i_min:i_max, np.newaxis])[0:2]
+        residuals += residuals_i
+        combined_scaled[i_min:i_max] = combined_interp[i_min:i_max] * c[0]
 
-    # from scipy.linalg import lstsq
-    # c, residuals = lstsq(combined_interp[:, np.newaxis],
-    #                      observed_spectrum.flux[:, np.newaxis],
-    #                      check_finite=False, lapack_driver='gelsy')[0:2]
-
-    return combined_interp * c[0], residuals
+    return combined_scaled, residuals
 
 
 def combine_spectra(spectrum_phot, spectrum_spot, spotted_area):

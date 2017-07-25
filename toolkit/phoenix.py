@@ -60,8 +60,8 @@ def get_phoenix_model_spectrum(T_eff, log_g=4.5, cache=True):
     fluxes_path = download_file(url, cache=cache, timeout=30)
     fluxes = fits.getdata(fluxes_path)
 
-    wavelength_url = ('ftp://phoenix.astro.physik.uni-goettingen.de/v2.0/HiResFITS/'
-                      'WAVE_PHOENIX-ACES-AGSS-COND-2011.fits')
+    wavelength_url = ('ftp://phoenix.astro.physik.uni-goettingen.de/v2.0/'
+                      'HiResFITS/WAVE_PHOENIX-ACES-AGSS-COND-2011.fits')
     wavelength_path = download_file(wavelength_url, cache=cache, timeout=30)
     wavelengths_vacuum = fits.getdata(wavelength_path)
 
@@ -94,7 +94,8 @@ def construct_model_grid(temp_min=3000, temp_max=6000):
             wavelengths_order = np.argsort(tmp_model.wavelength)
             wavelengths = tmp_model.wavelength[wavelengths_order]
 
-        each_model = get_phoenix_model_spectrum(test_temp, log_g=4.5, cache=True)
+        each_model = get_phoenix_model_spectrum(test_temp, log_g=4.5,
+                                                cache=True)
         all_models[:, i] = each_model.flux[wavelengths_order]
     return wavelengths, test_temps, all_models
 
@@ -114,7 +115,8 @@ class ModelGrid(object):
             self.all_models = pickled_grid['all_models']
 
         else:
-            wavelengths, test_temps, all_models = construct_model_grid(temp_min, temp_max)
+            wavelengths, test_temps, all_models = construct_model_grid(temp_min,
+                                                                       temp_max)
             np.savez(path, wavelengths=wavelengths.value, test_temps=test_temps,
                      all_models=all_models)
 
@@ -122,9 +124,17 @@ class ModelGrid(object):
             self.test_temps = test_temps
             self.all_models = all_models
 
-        self.interp = RectBivariateSpline(self.wavelengths, self.test_temps,
-                                          self.all_models, kx=spline_order,
-                                          ky=spline_order)
+        self._interp = None
+        self.spline_order = spline_order
+
+    def interp(self, lam, temp):
+        if self._interp is None:
+            self._interp = RectBivariateSpline(self.wavelengths,
+                                               self.test_temps,
+                                               self.all_models,
+                                               kx=self.spline_order,
+                                               ky=self.spline_order)
+        return self._interp(lam, temp)
 
     def interp_reshape(self, lam, temp):
         return self.interp(lam, temp)[:, 0]
@@ -134,14 +144,17 @@ class ModelGrid(object):
         Get a full resolution PHOENIX model spectrum interpolated from
         the grid at temperature ``temp``
         """
+        from .spectra import SimpleSpectrum
 
-        flux = self.interp_reshape(self.wavelengths, temp)
+        if temp in phoenix_model_temps:
+            this_temperature = temp == self.test_temps
+            flux = np.compress(this_temperature, self.all_models, axis=1)
+
+        else:
+            flux = self.interp_reshape(self.wavelengths, temp)
 
         flux /= flux.max()
 
-        from .spectra import SimpleSpectrum
-
         return SimpleSpectrum(self.wavelengths, flux,
                               dispersion_unit=u.Angstrom)
-
 
