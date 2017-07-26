@@ -9,9 +9,10 @@ from .spectra import SimpleSpectrum
 
 __all__ = ["instr_model", "combine_spectra"]
 
+err_bar = 0.025
 
 def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
-                observed_spectrum, model_grid):
+                observed_spectrum, model_grid, err_bar=err_bar):
 
     # Kernel for instrumental broadening profile:
     kernel = gaussian(int(5*res), res)
@@ -34,9 +35,11 @@ def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
     residuals = 0
     for i_min, i_max in observed_spectrum.wavelength_splits:
         c, residuals_i = np.linalg.lstsq(combined_interp[i_min:i_max, np.newaxis],
-                                       observed_spectrum.flux[i_min:i_max, np.newaxis])[0:2]
+                                         observed_spectrum.flux[i_min:i_max, np.newaxis])[0:2]
         residuals += residuals_i
         combined_scaled[i_min:i_max] = combined_interp[i_min:i_max] * c[0]
+
+    residuals /= err_bar**2
 
     return combined_scaled, residuals
 
