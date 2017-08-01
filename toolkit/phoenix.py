@@ -126,14 +126,27 @@ class ModelGrid(object):
 
         self._interp = None
         self.spline_order = spline_order
+        self.cache = dict()
 
     def interp(self, lam, temp):
+
         if self._interp is None:
             self._interp = RectBivariateSpline(self.wavelengths,
                                                self.test_temps,
                                                self.all_models,
                                                kx=self.spline_order,
                                                ky=self.spline_order)
+
+        # if temp not in self.cache:
+        #     if len(self.cache) > 0:
+        #         cached_temps = np.array(list(self.cache))
+        #         nearest_temp = cached_temps[np.argmin(np.abs(cached_temps - temp))]
+        #
+        #         if abs(temp - nearest_temp) < 1:
+        #             return self.cache[nearest_temp]
+        #
+        #     self.cache[temp] = self._interp(lam, temp)
+        # return self.cache[temp]
         return self._interp(lam, temp)
 
     def interp_reshape(self, lam, temp):
@@ -157,4 +170,24 @@ class ModelGrid(object):
 
         return SimpleSpectrum(self.wavelengths, flux,
                               dispersion_unit=u.Angstrom)
+
+    def nearest_spectrum(self, temp, to_nearest=25):
+        """
+        Get a full resolution PHOENIX model spectrum interpolated from
+        the grid at temperature ``temp``
+        """
+        from .spectra import SimpleSpectrum
+
+        if temp in phoenix_model_temps:
+            this_temperature = temp == self.test_temps
+            flux = np.compress(this_temperature, self.all_models, axis=1)
+        else:
+            rounded_temperature = round(temp / to_nearest) * to_nearest
+            flux = self.interp_reshape(self.wavelengths, rounded_temperature)
+
+        flux /= flux.max()
+
+        return SimpleSpectrum(self.wavelengths, flux,
+                              dispersion_unit=u.Angstrom)
+
 

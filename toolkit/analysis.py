@@ -11,6 +11,7 @@ __all__ = ["instr_model", "combine_spectra"]
 
 err_bar = 0.025
 
+
 def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
                 observed_spectrum, model_grid, err_bar=err_bar):
 
@@ -21,6 +22,11 @@ def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
     lam_min = observed_spectrum.wavelength.min().value
     lam_max = observed_spectrum.wavelength.max().value
 
+#    model_phot = model_grid.nearest_spectrum(temp_phot)
+#    model_phot.slice(lam_min, lam_max)
+#    model_spot = model_grid.nearest_spectrum(temp_spot)
+#    model_spot.slice(lam_min, lam_max)
+
     model_phot = model_grid.spectrum(temp_phot)
     model_phot.slice(lam_min, lam_max)
     model_spot = model_grid.spectrum(temp_spot)
@@ -28,8 +34,16 @@ def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
 
     combined_spectrum = combine_spectra(model_phot, model_spot, spotted_area)
     combined_spectrum.convolve(kernel=kernel)
-    combined_interp = combined_spectrum.interpolate(observed_spectrum.wavelength -
-                                                    lam_offset*u.Angstrom)
+
+    # Apply wavelength correction just to red wavelengths:
+    corrected_wavelengths = observed_spectrum.wavelength.copy()
+    red_wavelengths = corrected_wavelengths > 7000*u.Angstrom
+    blue_wavelengths = np.logical_not(red_wavelengths)
+    corrected_wavelengths[red_wavelengths] -= lam_offset*u.Angstrom
+    corrected_wavelengths[blue_wavelengths] -= (lam_offset + 0.35)*u.Angstrom
+    combined_interp = combined_spectrum.interpolate(corrected_wavelengths)
+    # combined_interp = combined_spectrum.interpolate(observed_spectrum.wavelength -
+    #                                                 lam_offset*u.Angstrom)
 
     combined_scaled = combined_interp.copy()
     residuals = 0
