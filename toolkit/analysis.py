@@ -37,10 +37,14 @@ def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
 
     # Apply wavelength correction just to red wavelengths:
     corrected_wavelengths = observed_spectrum.wavelength.copy()
-    red_wavelengths = corrected_wavelengths > 7000*u.Angstrom
-    blue_wavelengths = np.logical_not(red_wavelengths)
-    corrected_wavelengths[red_wavelengths] -= lam_offset*u.Angstrom
+    mid_wavelengths = (corrected_wavelengths > 7000*u.Angstrom) & (corrected_wavelengths < 8500*u.Angstrom)
+#    blue_wavelengths = np.logical_not(red_wavelengths)
+    blue_wavelengths = (corrected_wavelengths < 7000*u.Angstrom)
+    red_wavelengths = corrected_wavelengths > 8500*u.Angstrom
+    corrected_wavelengths[mid_wavelengths] -= lam_offset*u.Angstrom
     corrected_wavelengths[blue_wavelengths] -= (lam_offset + 0.35)*u.Angstrom
+    corrected_wavelengths[red_wavelengths] -= (lam_offset - 0.35)*u.Angstrom
+
     combined_interp = combined_spectrum.interpolate(corrected_wavelengths)
     # combined_interp = combined_spectrum.interpolate(observed_spectrum.wavelength -
     #                                                 lam_offset*u.Angstrom)
