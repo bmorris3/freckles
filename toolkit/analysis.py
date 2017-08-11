@@ -28,9 +28,9 @@ def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
 #    model_spot.slice(lam_min, lam_max)
 
     model_phot = model_grid.spectrum(temp_phot)
-    model_phot.slice(lam_min, lam_max)
+    #model_phot.slice(lam_min, lam_max)
     model_spot = model_grid.spectrum(temp_spot)
-    model_spot.slice(lam_min, lam_max)
+    #model_spot.slice(lam_min, lam_max)
 
     combined_spectrum = combine_spectra(model_phot, model_spot, spotted_area)
     combined_spectrum.convolve(kernel=kernel)
