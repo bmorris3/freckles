@@ -93,15 +93,15 @@ ulimit -v $MEMPERTASK
 ## (careful, PBS defaults to user home directory)
 cd $PBS_O_WORKDIR
 
-mpiexec.hydra -n $HYAK_NPE /usr/lusers/bmmorris/miniconda3/bin/python {run_script} {spectrum_number}
+mpiexec.hydra -n $HYAK_NPE /usr/lusers/bmmorris/miniconda3/bin/python {run_script} {spectrum_number} {out_dir}
 """
 
-def launch_hyak_run(n_spectra, run_script, run_dir, job_name='freckles',
+def launch_hyak_run(n_spectra, run_script, run_dir, out_dir, job_name='freckles',
                     log_dir='/gscratch/stf/bmmorris/freckles/logs',
                     submit_script_dir='/gscratch/stf/bmmorris/friedrich/submit_scripts'):
 
     for i in range(n_spectra):
-        walltime = '00:30:00'
+        walltime = '01:00:00'
         email = 'bmmorris@uw.edu'
 
         spectrum_number = str(i)
@@ -113,6 +113,7 @@ def launch_hyak_run(n_spectra, run_script, run_dir, job_name='freckles',
                                                walltime=walltime,
                                                email=email,
                                                run_script=run_script,
+                                               out_dir=out_dir,
                                                spectrum_number=spectrum_number)
 
         submit_script_path = os.path.join(submit_script_dir, submit_script_name)
@@ -123,4 +124,5 @@ def launch_hyak_run(n_spectra, run_script, run_dir, job_name='freckles',
 
 run_script = '/usr/lusers/bmmorris/git/freckles/fit_hat11_spectrum.py'
 run_dir = '/usr/lusers/bmmorris/git/freckles/'
-launch_hyak_run()
+out_dir = '/gscratch/stf/bmmorris/freckles/outputs'
+launch_hyak_run(20, run_script, run_dir, out_dir)

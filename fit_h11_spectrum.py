@@ -5,10 +5,12 @@ import astropy.units as u
 import os
 from itertools import combinations
 import emcee
-
+from emcee.utils import MPIPool
 
 from toolkit import (get_phoenix_model_spectrum, EchelleSpectrum, ModelGrid,
-                     slice_spectrum, concatenate_spectra, bands_TiO, instr_model)
+                     slice_spectrum, concatenate_spectra, bands_TiO, instr_model, 
+                     combine_spectra)
+from scipy.signal import gaussian
 
 model_grid = ModelGrid()
 fixed_temp_phot = 4780
@@ -67,14 +69,16 @@ def nearest_order(spectrum, wavelength):
     return np.argmin([abs(spec.wavelength.mean() - wavelength).value
                       for spec in spectrum.spectrum_list])
 
-#home_dir = '/local/tmp/freckles/' if os.uname().sysname == 'Linux' else os.path.expanduser('~')
-home_dir = '/usr/lusers/bmmorris/freckles_data/'
-standard_path = os.path.join(home_dir, 'Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
+home_dir = '/local/tmp/freckles/' if os.uname().sysname == 'Linux' else os.path.expanduser('~')
+#home_dir = '/usr/lusers/bmmorris/freckles_data/'
+#standard_path = os.path.join(home_dir, 'Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
+standard_path = os.path.join(home_dir, 'data/Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
+
 standard_spectrum = EchelleSpectrum.from_fits(standard_path)
 
 import sys
 file_index = sys.argv[1]
-in_path = fits_files[file_index]
+in_path = fits_files[int(file_index)]
 #in_path = os.path.join('/run/media/bmmorris/PASSPORT/APO/Q3UW04/UT160703',
 #                       'KIC9652680.0028.wfrmcpc.fits')
                         #'KIC9652680.0025.wfrmcpc.fits')#fits_files[-2]
@@ -168,14 +172,22 @@ while len(pos) < nwalkers:
     if np.isfinite(lnlike(try_this)):
         pos.append(try_this)
 
-sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, threads=4)
+pool = MPIPool(loadbalance=True)
+if not pool.is_master():
+    pool.wait()
+    sys.exit(0)
 
-start = time.time()
+sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, pool=pool)
+
 print("Running MCMC burn-in...")
 pos1 = sampler.run_mcmc(pos, 50)[0]#, rstate0=np.random.get_state())
 
 print("Running MCMC...")
 sampler.reset()
-pos2 = sampler.run_mcmc(pos1, 1000)[0]
+pos2 = sampler.run_mcmc(pos1, 500)[0]
+print("MCMC done")
 
-np.save('lastthousand.txt', sampler.flatchain[-1000:, :])
+pool.close()
+output_path = os.path.join(outfile_path, 'chains_{02d}.txt'.format(int(file_ind)))
+np.savetxt(output_path, sampler.flatchain[-10000:, :])
+#np.save('lastthousand.txt', sampler.flatchain[-1000:, :])
