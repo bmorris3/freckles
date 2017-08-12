@@ -31,7 +31,7 @@ submit_template = """#!/bin/bash
 #PBS -q bf
 
 ## NUMBER nodes, CPUs per node, and MEMORY
-#PBS -l nodes=1:ppn=16,mem=20gb,feature=intel,feature=16core
+#PBS -l nodes=1:ppn=8,mem=20gb,feature=intel,feature=8core
 
 ## WALLTIME (defaults to 1 hour as the minimum, specify > 1 hour longer jobs)
 #PBS -l walltime={walltime}
