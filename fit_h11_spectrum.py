@@ -191,6 +191,6 @@ print("MCMC done")
 
 pool.close()
 outfile_path = sys.arv[2]
-output_path = os.path.join(outfile_path, 'chains_{02d}.txt'.format(int(file_ind)))
+output_path = os.path.join(outfile_path, 'chains_{02d}.txt'.format(int(file_index)))
 np.savetxt(output_path, sampler.flatchain[-10000:, :])
 #np.save('lastthousand.txt', sampler.flatchain[-1000:, :])
