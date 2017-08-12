@@ -20,8 +20,11 @@ model_spot = model_grid.spectrum(fixed_temp_spot)
 
 
 fits_files = []
+home_dir = '/usr/lusers/bmmorris/freckles_data/'
 
-for dirpath, dirnames, files in os.walk('/local/tmp/freckles/data/'):
+
+#for dirpath, dirnames, files in os.walk('/local/tmp/freckles/data/'):
+for dirpath, dirnames, files in os.walk(home_dir):
     for file in files:
         file_path = os.path.join(dirpath, file)
         if (file_path.endswith('.fits') and ('weird' not in file_path) 
@@ -69,10 +72,9 @@ def nearest_order(spectrum, wavelength):
     return np.argmin([abs(spec.wavelength.mean() - wavelength).value
                       for spec in spectrum.spectrum_list])
 
-home_dir = '/local/tmp/freckles/' if os.uname().sysname == 'Linux' else os.path.expanduser('~')
-#home_dir = '/usr/lusers/bmmorris/freckles_data/'
-#standard_path = os.path.join(home_dir, 'Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
-standard_path = os.path.join(home_dir, 'data/Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
+#home_dir = '/local/tmp/freckles/' if os.uname().sysname == 'Linux' else os.path.expanduser('~')
+standard_path = os.path.join(home_dir, 'Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
+#standard_path = os.path.join(home_dir, 'data/Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
 
 standard_spectrum = EchelleSpectrum.from_fits(standard_path)
 
