@@ -98,7 +98,7 @@ mpiexec.hydra -n $HYAK_NPE /usr/lusers/bmmorris/miniconda3/bin/python {run_scrip
 
 def launch_hyak_run(n_spectra, run_script, run_dir, out_dir, job_name='freckles',
                     log_dir='/gscratch/stf/bmmorris/freckles/logs',
-                    submit_script_dir='/gscratch/stf/bmmorris/friedrich/submit_scripts'):
+                    submit_script_dir='/gscratch/stf/bmmorris/freckles/submit_scripts'):
 
     for i in range(n_spectra):
         walltime = '01:00:00'
