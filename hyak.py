@@ -122,7 +122,7 @@ def launch_hyak_run(n_spectra, run_script, run_dir, out_dir, job_name='freckles'
         #print('qsub {0}'.format(submit_script_path))
         os.system('qsub {0}'.format(submit_script_path))
 
-run_script = '/usr/lusers/bmmorris/git/freckles/fit_hat11_spectrum.py'
+run_script = '/usr/lusers/bmmorris/git/freckles/fit_h11_spectrum.py'
 run_dir = '/usr/lusers/bmmorris/git/freckles/'
 out_dir = '/gscratch/stf/bmmorris/freckles/outputs'
 launch_hyak_run(20, run_script, run_dir, out_dir)
