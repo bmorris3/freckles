@@ -1,3 +1,6 @@
+import time
+start = time.time()
+
 import matplotlib.pyplot as plt
 import numpy as np
 from glob import glob
@@ -186,11 +189,13 @@ pos1 = sampler.run_mcmc(pos, 50)[0]#, rstate0=np.random.get_state())
 
 print("Running MCMC...")
 sampler.reset()
-pos2 = sampler.run_mcmc(pos1, 500)[0]
+pos2 = sampler.run_mcmc(pos1, 27000)[0]
+end = time.time()
+print("runtime", (end-start)/60)
 print("MCMC done")
 
 pool.close()
 outfile_path = sys.argv[2]
-output_path = os.path.join(outfile_path, 'chains_{02d}.txt'.format(int(file_index)))
+output_path = os.path.join(outfile_path, 'chains_{0:02d}.txt'.format(int(file_index)))
 np.savetxt(output_path, sampler.flatchain[-10000:, :])
 #np.save('lastthousand.txt', sampler.flatchain[-1000:, :])
