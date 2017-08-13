@@ -141,8 +141,8 @@ def instr_model_fixed(spotted_area, lam_offset, res, observed_spectrum):
 
 def lnprior(theta):
     lna, dlam, lnf, res = theta
-    if ((-10 < lna < np.log(0.5)) and (-1 < dlam < 1) and 
-        (0.5 < res < 5) and (-4 < lnf < -1)):
+    if ((-10 < lna < np.log(0.5)) and (-0.05 < dlam < 0.05) and 
+        (0.5 < res < 3) and (-4 < lnf < -1)):
         return 0.0
     return -np.inf
 
@@ -167,8 +167,8 @@ ndim, nwalkers = 4, 12
 pos = []
 
 while len(pos) < nwalkers: 
-    try_this = (np.array([np.log(0.3), 0, -2.8, 2.2]) + 
-                np.array([2, 0.01, 0.05, 0.5]) * np.random.randn(ndim))
+    try_this = (np.array([np.log(0.3), 0, -6, 1.8]) + 
+                np.array([2, 0.001, 0.05, 0.5]) * np.random.randn(ndim))
     if np.isfinite(lnlike(try_this)):
         pos.append(try_this)
 
