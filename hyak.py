@@ -101,7 +101,7 @@ def launch_hyak_run(n_spectra, run_script, run_dir, out_dir, job_name='freckles'
                     submit_script_dir='/gscratch/stf/bmmorris/freckles/submit_scripts'):
 
     for i in range(n_spectra):
-        walltime = '01:00:00'
+        walltime = '04:00:00'
         email = 'bmmorris@uw.edu'
 
         spectrum_number = str(i)

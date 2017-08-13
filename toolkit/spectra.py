@@ -13,7 +13,7 @@ from astropy.time import Time
 from specutils.io import read_fits
 from specutils import Spectrum1D as Spec1D
 from scipy.ndimage import gaussian_filter1d, convolve1d
-from scipy.signal import gaussian
+from scipy.signal import gaussian, argrelmax
 from scipy.interpolate import interp1d
 
 from .spectral_type import query_for_T_eff
@@ -276,8 +276,13 @@ class EchelleSpectrum(object):
         wavelength_offset : `~astropy.units.Quantity`
             Offset the wavelengths by this amount
         """
-        for spectrum in self.spectrum_list:
-            spectrum.wavelength += wavelength_offset
+        if hasattr(wavelength_offset, '__len__'):
+            for spectrum, offset in zip(self.spectrum_list, wavelength_offset):
+                spectrum.wavelength += offset
+        else: 
+            # Old behavior
+            for spectrum in self.spectrum_list:
+                spectrum.wavelength += wavelength_offset
 
     def rv_wavelength_shift(self, spectral_order, T_eff=None, plot=False):
         """
@@ -324,7 +329,7 @@ class EchelleSpectrum(object):
                      label='smooth model')
 
             plt.legend()
-            plt.show()
+            #plt.show()
 
         return rv_shift
 
@@ -475,9 +480,9 @@ def interpolate_spectrum(spectrum, new_wavelengths):
     #     start_ind, end_ind = end_ind, start_ind
     #
     # return spectrum.slice_index(start_ind, end_ind)
-    #sort_order = np.argsort(spectrum.masked_wavelength.value)
-    sorted_spectrum_wavelengths = spectrum.masked_wavelength.value#[sort_order]
-    sorted_spectrum_fluxes = spectrum.masked_flux#[sort_order]
+    sort_order = np.argsort(spectrum.masked_wavelength.value)
+    sorted_spectrum_wavelengths = spectrum.masked_wavelength.value[sort_order]
+    sorted_spectrum_fluxes = spectrum.masked_flux[sort_order]
 
     new_flux = np.interp(new_wavelengths.value,
                          sorted_spectrum_wavelengths,
@@ -514,15 +519,23 @@ def cross_corr(target_spectrum, model_spectrum, kernel_width):
     corr = np.correlate(target_spectrum.masked_flux,
                         smoothed_model_flux, mode='same')
 
-    max_corr_ind = np.argmax(corr)
+    maxes = argrelmax(corr)[0]
+    if len(maxes) > 1: 
+        next_to_nearest = np.argsort(np.abs(maxes - corr.shape[0]/2))[1]
+    else: 
+        next_to_nearest = 0
+    max_corr_ind = maxes[next_to_nearest]
+    #max_corr_ind = np.argmax(corr)
+    #index_shift = corr.shape[0]/2 - max_corr_ind
     index_shift = corr.shape[0]/2 - max_corr_ind
 
     # delta_wavelength = np.abs(target_spectrum.masked_wavelength[1] -
     #                           target_spectrum.masked_wavelength[0])
 
     delta_wavelength = np.median(np.abs(np.diff(target_spectrum.masked_wavelength)))
-
     wavelength_shift = index_shift * delta_wavelength
+    #print('delta_wave', delta_wavelength, 'index_shift', index_shift)
+
     return wavelength_shift
 
 

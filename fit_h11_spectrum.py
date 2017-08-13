@@ -1,6 +1,6 @@
 import time
 start = time.time()
-
+import sys
 import matplotlib.pyplot as plt
 import numpy as np
 from glob import glob
@@ -81,7 +81,6 @@ standard_path = os.path.join(home_dir, 'Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.f
 
 standard_spectrum = EchelleSpectrum.from_fits(standard_path)
 
-import sys
 file_index = sys.argv[1]
 in_path = fits_files[int(file_index)]
 #in_path = os.path.join('/run/media/bmmorris/PASSPORT/APO/Q3UW04/UT160703',
@@ -97,9 +96,12 @@ target_spectrum.continuum_normalize(standard_spectrum,
 
 rv_shifts = u.Quantity([target_spectrum.rv_wavelength_shift(order, T_eff=5618)
                         for order in only_orders])
-median_rv_shift = np.median(rv_shifts)
+#median_rv_shift = np.median(rv_shifts)
 
-target_spectrum.offset_wavelength_solution(median_rv_shift)
+x = np.arange(0, len(rv_shifts))
+y = np.polyval(np.polyfit(np.arange(25, 40), rv_shifts.value[25:40], 1), x)
+target_spectrum.offset_wavelength_solution(y*u.Angstrom)
+#target_spectrum.offset_wavelength_solution(rv_shifts)
 
 spec_band = []
 for band in bands_TiO:
@@ -117,13 +119,7 @@ def instr_model_fixed(spotted_area, lam_offset, res, observed_spectrum):
 
     # Apply wavelength correction just to red wavelengths:
     corrected_wavelengths = observed_spectrum.wavelength.copy()
-    mid_wavelengths = ((corrected_wavelengths > 7000*u.Angstrom) & 
-                       (corrected_wavelengths < 8500*u.Angstrom))
-    blue_wavelengths = (corrected_wavelengths < 7000*u.Angstrom)
-    red_wavelengths = corrected_wavelengths > 8500*u.Angstrom
-    corrected_wavelengths[mid_wavelengths] -= lam_offset*u.Angstrom
-    corrected_wavelengths[blue_wavelengths] -= (lam_offset + 0.35)*u.Angstrom
-    corrected_wavelengths[red_wavelengths] -= (lam_offset - 0.35)*u.Angstrom
+    corrected_wavelengths -= lam_offset*u.Angstrom
 
     combined_interp = combined_spectrum.interpolate(corrected_wavelengths)
 
@@ -137,7 +133,6 @@ def instr_model_fixed(spotted_area, lam_offset, res, observed_spectrum):
                                          observed_spectrum.flux[i_min:i_max, np.newaxis])[0:2]
     
         residuals += residuals_i
-        #combined_scaled[i_min:i_max] = c[0] * combined_interp[i_min:i_max] 
         combined_scaled[i_min:i_max] = (c[0] * combined_interp[i_min:i_max] + 
                                         c[1] * corrected_wavelengths[i_min:i_max].value)
 
@@ -147,7 +142,7 @@ def instr_model_fixed(spotted_area, lam_offset, res, observed_spectrum):
 def lnprior(theta):
     lna, dlam, lnf, res = theta
     if ((-10 < lna < np.log(0.5)) and (-20 < dlam < 20) and 
-        (0.5 < res < 2) and (-4 < lnf < -1)):
+        (0.5 < res < 5) and (-4 < lnf < -1)):
         return 0.0
     return -np.inf
 
@@ -168,12 +163,12 @@ def lnprob(theta):
         return -np.inf
     return lp + lnlike(theta)
 
-ndim, nwalkers = 4, 8
+ndim, nwalkers = 4, 12
 pos = []
 
 while len(pos) < nwalkers: 
-    try_this = (np.array([np.log(0.3), -1.61, -2.8, 1.14]) + 
-                np.array([2, 0.1, 0.2, 0.1]) * np.random.randn(ndim))
+    try_this = (np.array([np.log(0.3), 0, -2.8, 1.14]) + 
+                np.array([2, 0.01, 0.2, 0.1]) * np.random.randn(ndim))
     if np.isfinite(lnlike(try_this)):
         pos.append(try_this)
 
@@ -189,7 +184,7 @@ pos1 = sampler.run_mcmc(pos, 50)[0]#, rstate0=np.random.get_state())
 
 print("Running MCMC...")
 sampler.reset()
-pos2 = sampler.run_mcmc(pos1, 27000)[0]
+pos2 = sampler.run_mcmc(pos1, 10000)[0]
 end = time.time()
 print("runtime", (end-start)/60)
 print("MCMC done")

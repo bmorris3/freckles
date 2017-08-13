@@ -19,7 +19,7 @@ class Band(object):
 
 strong_lines = u.Quantity([5598.410, 7054.189, 7087.598, 7125.585, 8859.802], u.Angstrom)
 
-band_bounds = u.Quantity([[-2, 2], [-1, 1], [-1, 2], [-2, 2], [-2, 2]], u.Angstrom)
+band_bounds = u.Quantity([[-2, 2], [-1, 1], [-1, 1], [-2, 2], [-2, 2]], u.Angstrom)
 #band_bounds = u.Quantity([[-1, 1], [-1, 1], [-1, 1], [-1, 1]], u.Angstrom)
 #band_bounds = u.Quantity([[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]], u.Angstrom)
 
