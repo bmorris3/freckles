@@ -94,7 +94,7 @@ target_spectrum.continuum_normalize(standard_spectrum,
                                     only_orders=only_orders,
                                     plot_masking=False)
 
-rv_shifts = u.Quantity([target_spectrum.rv_wavelength_shift(order, T_eff=5618)
+rv_shifts = u.Quantity([target_spectrum.rv_wavelength_shift(order, T_eff=4780)
                         for order in only_orders])
 #median_rv_shift = np.median(rv_shifts)
 
