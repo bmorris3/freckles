@@ -141,7 +141,7 @@ def instr_model_fixed(spotted_area, lam_offset, res, observed_spectrum):
 
 def lnprior(theta):
     lna, dlam, lnf, res = theta
-    if ((-10 < lna < np.log(0.5)) and (-20 < dlam < 20) and 
+    if ((-10 < lna < np.log(0.5)) and (-1 < dlam < 1) and 
         (0.5 < res < 5) and (-4 < lnf < -1)):
         return 0.0
     return -np.inf
@@ -167,8 +167,8 @@ ndim, nwalkers = 4, 12
 pos = []
 
 while len(pos) < nwalkers: 
-    try_this = (np.array([np.log(0.3), 0, -2.8, 1.14]) + 
-                np.array([2, 0.01, 0.2, 0.1]) * np.random.randn(ndim))
+    try_this = (np.array([np.log(0.3), 0, -2.8, 2.2]) + 
+                np.array([2, 0.01, 0.05, 0.5]) * np.random.randn(ndim))
     if np.isfinite(lnlike(try_this)):
         pos.append(try_this)
 
@@ -184,7 +184,7 @@ pos1 = sampler.run_mcmc(pos, 50)[0]#, rstate0=np.random.get_state())
 
 print("Running MCMC...")
 sampler.reset()
-pos2 = sampler.run_mcmc(pos1, 10000)[0]
+pos2 = sampler.run_mcmc(pos1, 20000)[0]
 end = time.time()
 print("runtime", (end-start)/60)
 print("MCMC done")
