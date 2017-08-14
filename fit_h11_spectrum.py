@@ -99,7 +99,7 @@ rv_shifts = u.Quantity([target_spectrum.rv_wavelength_shift(order, T_eff=4780)
 #median_rv_shift = np.median(rv_shifts)
 
 x = np.arange(0, len(rv_shifts))
-y = np.polyval(np.polyfit(np.arange(25, 40), rv_shifts.value[25:40], 1), x)
+y = np.polyval(np.polyfit(np.arange(32, 40), rv_shifts.value[32:40], 1), x)
 target_spectrum.offset_wavelength_solution(y*u.Angstrom)
 #target_spectrum.offset_wavelength_solution(rv_shifts)
 
@@ -141,7 +141,7 @@ def instr_model_fixed(spotted_area, lam_offset, res, observed_spectrum):
 
 def lnprior(theta):
     lna, dlam, lnf, res = theta
-    if ((-10 < lna < np.log(0.5)) and (-0.05 < dlam < 0.05) and 
+    if ((-10 < lna < np.log(0.5)) and (-1 < dlam < 1) and 
         (-10 < lnf < -1) and (0.5 < res < 3)):
         return 0.0
     return -np.inf
