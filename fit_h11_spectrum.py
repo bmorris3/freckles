@@ -111,7 +111,8 @@ y = rv_shifts.value[10:45]
 ransac = linear_model.RANSACRegressor()
 ransac.fit(X, y)
 line_X = np.arange(X.min(), X.max())[:, np.newaxis]
-line_y_ransac = ransac.predict(line_X)
+#line_y_ransac = ransac.predict(line_X)
+line_y_ransac = ransac.predict(np.arange(len(rv_shifts)))
 target_spectrum.offset_wavelength_solution(line_y_ransac*u.Angstrom)
 
 spec_band = []
