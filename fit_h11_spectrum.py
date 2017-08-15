@@ -143,7 +143,7 @@ def instr_model_fixed(spotted_area, lam_offset, res, observed_spectrum):
 
 def lnprior(theta):
     lna, dlam, lnf, res = theta
-    if ((-10 < lna < np.log(0.5)) and (-1 < dlam < 1) and 
+    if ((-10 < lna < np.log(0.5)) and (-3 < dlam < 3) and 
         (-10 < lnf < -1) and (0.5 < res < 3)):
         return 0.0
     return -np.inf
