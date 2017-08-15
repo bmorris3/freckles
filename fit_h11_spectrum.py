@@ -98,10 +98,20 @@ rv_shifts = u.Quantity([target_spectrum.rv_wavelength_shift(order, T_eff=4780)
                         for order in only_orders])
 #median_rv_shift = np.median(rv_shifts)
 
-x = np.arange(0, len(rv_shifts))
-y = np.polyval(np.polyfit(np.arange(32, 40), rv_shifts.value[32:40], 1), x)
-target_spectrum.offset_wavelength_solution(y*u.Angstrom)
+# x = np.arange(0, len(rv_shifts))
+# y = np.polyval(np.polyfit(np.arange(32, 40), rv_shifts.value[32:40], 1), x)
+# target_spectrum.offset_wavelength_solution(y*u.Angstrom)
 #target_spectrum.offset_wavelength_solution(rv_shifts)
+
+from sklearn import linear_model
+
+X = np.arange(len(rv_shifts))[10:45, np.newaxis]
+y = rv_shifts.value[10:45]
+
+ransac = linear_model.RANSACRegressor()
+line_X = np.arange(X.min(), X.max())[:, np.newaxis]
+line_y_ransac = ransac.predict(line_X)
+target_spectrum.offset_wavelength_solution(line_y_ransac*u.Angstrom)
 
 spec_band = []
 for band in bands_TiO:
