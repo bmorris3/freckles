@@ -1,19 +1,21 @@
 import time
 start = time.time()
 import sys
-import matplotlib.pyplot as plt
-import numpy as np
-from glob import glob
-import astropy.units as u
 import os
+from glob import glob
 from itertools import combinations
+
+import numpy as np
+import matplotlib.pyplot as plt
+import astropy.units as u
 import emcee
 from emcee.utils import MPIPool
+from sklearn import linear_model
+from scipy.signal import gaussian
 
 from toolkit import (get_phoenix_model_spectrum, EchelleSpectrum, ModelGrid,
                      slice_spectrum, concatenate_spectra, bands_TiO, instr_model, 
                      combine_spectra)
-from scipy.signal import gaussian
 
 model_grid = ModelGrid()
 fixed_temp_phot = 4780
@@ -21,10 +23,8 @@ fixed_temp_spot = fixed_temp_phot - 300
 model_phot = model_grid.spectrum(fixed_temp_phot)
 model_spot = model_grid.spectrum(fixed_temp_spot)
 
-
 fits_files = []
 home_dir = '/usr/lusers/bmmorris/freckles_data/'
-
 
 #for dirpath, dirnames, files in os.walk('/local/tmp/freckles/data/'):
 for dirpath, dirnames, files in os.walk(home_dir):
@@ -83,9 +83,7 @@ standard_spectrum = EchelleSpectrum.from_fits(standard_path)
 
 file_index = sys.argv[1]
 in_path = fits_files[int(file_index)]
-#in_path = os.path.join('/run/media/bmmorris/PASSPORT/APO/Q3UW04/UT160703',
-#                       'KIC9652680.0028.wfrmcpc.fits')
-                        #'KIC9652680.0025.wfrmcpc.fits')#fits_files[-2]
+
 print(in_path)
 target_spectrum = EchelleSpectrum.from_fits(in_path)
 only_orders = list(range(len(target_spectrum.spectrum_list)))
@@ -96,23 +94,15 @@ target_spectrum.continuum_normalize(standard_spectrum,
 
 rv_shifts = u.Quantity([target_spectrum.rv_wavelength_shift(order, T_eff=4780)
                         for order in only_orders])
-#median_rv_shift = np.median(rv_shifts)
 
-# x = np.arange(0, len(rv_shifts))
-# y = np.polyval(np.polyfit(np.arange(32, 40), rv_shifts.value[32:40], 1), x)
-# target_spectrum.offset_wavelength_solution(y*u.Angstrom)
-#target_spectrum.offset_wavelength_solution(rv_shifts)
-
-from sklearn import linear_model
-
+# Do RANSAC linear wavelength solution correction
 X = np.arange(len(rv_shifts))[10:45, np.newaxis]
 y = rv_shifts.value[10:45]
 
 ransac = linear_model.RANSACRegressor()
 ransac.fit(X, y)
 line_X = np.arange(X.min(), X.max())[:, np.newaxis]
-#line_y_ransac = ransac.predict(line_X)
-line_y_ransac = ransac.predict(np.arange(len(rv_shifts)))
+line_y_ransac = ransac.predict(np.arange(len(rv_shifts))[:, np.newaxis])
 target_spectrum.offset_wavelength_solution(line_y_ransac*u.Angstrom)
 
 spec_band = []
