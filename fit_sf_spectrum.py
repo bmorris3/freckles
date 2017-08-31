@@ -62,7 +62,7 @@ def nearest_order(spectrum, wavelength):
                       for spec in spectrum.spectrum_list])
 
 #home_dir = '/local/tmp/freckles/' if os.uname().sysname == 'Linux' else os.path.expanduser('~')
-standard_path = '/usr/lusers/bmmorris/git/freckles/freckles_data/Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits' #os.path.join(home_dir, 'Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
+standard_path = '/usr/lusers/bmmorris/freckles_data/Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits' #os.path.join(home_dir, 'Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
 #standard_path = os.path.join(home_dir, 'data/Q3UW04/UT160706/BD28_4211.0034.wfrmcpc.fits')
 
 standard_spectrum = EchelleSpectrum.from_fits(standard_path)
