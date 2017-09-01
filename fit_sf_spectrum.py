@@ -15,7 +15,7 @@ from scipy.signal import gaussian
 
 from toolkit import (get_phoenix_model_spectrum, EchelleSpectrum, ModelGrid,
                      slice_spectrum, concatenate_spectra, bands_TiO, instr_model, 
-                     combine_spectra)
+                     combine_spectra, Band)
 
 model_grid = ModelGrid(temp_min=3000, temp_max=6500)
 
