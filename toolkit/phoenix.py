@@ -29,7 +29,7 @@ btsettl_path = os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir
 
 phoenix_grid_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
                                                  os.pardir, 'data',
-                                                 'spectra.hdf5'))
+                                                 'phoenix_grid.hdf5'))
 
 
 def get_path(T_eff):
@@ -235,6 +235,7 @@ phoenix_model_metallicities = np.array([-4, -3, -2, -1.5, -1, -0.5, -0, 0.5,
 
 phoenix_model_gravities = np.arange(0, 6.5, 0.5)
 
+
 def get_any_metallicity_url(T_eff, log_g, z):
     closest_grid_temperature = phoenix_model_temps[np.argmin(np.abs(phoenix_model_temps - T_eff))]
 
@@ -250,6 +251,7 @@ def get_any_metallicity_url(T_eff, log_g, z):
            '{log_g:1.2f}{z}.PHOENIX-ACES-AGSS-COND-2011-HiRes.fits'
            ).format(T_eff=closest_grid_temperature, log_g=log_g, z=z)
     return url
+
 
 def get_phoenix_model_wavelengths(cache=True):
     """
