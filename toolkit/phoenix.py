@@ -389,5 +389,6 @@ class PHOENIXModelGrid(object):
         flux = self.interp(temperature, gravity, metallicity, method=method,
                            wavelengths=wavelengths)
         from .spectra import Spectrum1D
-        return Spectrum1D(wavelengths if hasattr(wavelengths, 'unit') else
-                          u.Quantity(wavelengths, u.Angstrom), flux)
+        return Spectrum1D.from_array(wavelengths if hasattr(wavelengths, 'unit')
+                                     else u.Quantity(wavelengths, u.Angstrom),
+                                     flux)
