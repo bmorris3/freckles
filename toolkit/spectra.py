@@ -25,7 +25,7 @@ __all__ = ["EchelleSpectrum", "slice_spectrum", "interpolate_spectrum",
            "cross_corr", "Spectrum1D", "SimpleSpectrum", "concatenate_spectra"]
 
 
-approx_resolution_ratio = 6.4122026154034
+approx_resolution_ratio = 2 #@6.4122026154034
 smoothing_kernel = gaussian(int(5*approx_resolution_ratio),
                             approx_resolution_ratio)
 
@@ -284,7 +284,7 @@ class EchelleSpectrum(object):
             for spectrum in self.spectrum_list:
                 spectrum.wavelength += wavelength_offset
 
-    def rv_wavelength_shift(self, spectral_order, T_eff=None, plot=False):
+    def rv_wavelength_shift(self, spectral_order, T_eff=None, plot=False, sigma=2):
         """
         Solve for the radial velocity wavelength shift.
 
