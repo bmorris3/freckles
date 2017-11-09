@@ -272,11 +272,15 @@ def get_phoenix_model_wavelengths(cache=True):
     wavelengths_air = wavelengths_vacuum / f
     return wavelengths_air
 
+# alpha, beta, gamma delta
+iw_min = [6562.8 - 5, 4861 - 5, 4341 - 5, 4102 - 5]
+iw_max = [6562.8 + 5, 4861 + 5, 4341 + 5, 4102 + 5]
+
 
 class PHOENIXModelGrid(object):
     def __init__(self, path=phoenix_grid_path,
-                 interp_wavelength_min=6562.8-5,
-                 interp_wavelength_max=6562.8+5):
+                 interp_wavelength_min=iw_min,
+                 interp_wavelength_max=iw_max):
         self.path = path
 
         if not os.path.exists(path):
@@ -292,10 +296,16 @@ class PHOENIXModelGrid(object):
         wavelength_mask = ((all_wavelengths < wavelength_max) &
                            (all_wavelengths > wavelength_min))
         wavelengths_in_bounds = all_wavelengths[wavelength_mask]
-        interp_bounds = ((wavelengths_in_bounds < interp_wavelength_max) &
-                         (wavelengths_in_bounds > interp_wavelength_min))
+        if isinstance(interp_wavelength_max, float):
+            interp_bounds = ((wavelengths_in_bounds < interp_wavelength_max) &
+                             (wavelengths_in_bounds > interp_wavelength_min))
+        else:
+            interp_bounds = [((wavelengths_in_bounds < iw_max) &
+                             (wavelengths_in_bounds > iw_min))
+                             for iw_min, iw_max in
+                             zip(interp_wavelength_min, interp_wavelength_max)]
+            interp_bounds = np.logical_or.reduce(interp_bounds, axis=0)
         self.wavelengths = wavelengths_in_bounds[interp_bounds]
-
 
         points = (self.wavelengths, self.temperatures, self.gravities,
                   self.metallicities)
@@ -356,6 +366,7 @@ class PHOENIXModelGrid(object):
 
         wavelength_mask = ((wavelengths < wavelength_max) &
                            (wavelengths > wavelength_min))
+
         wavelengths_in_bounds = wavelengths[wavelength_mask]
 
         archive = h5py.File(path, 'w')
