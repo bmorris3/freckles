@@ -13,20 +13,23 @@ class Band(object):
         self.max = max
         self.core = core
 
+    def __repr__(self):
+        unit = u.Angstrom
+        return ("<Band: core={0}, (min, max)=({1}, {2}) [{3}]>"
+                .format(self.core.to(unit).value, self.min.to(unit).value,
+                        self.max.to(unit).value, unit))
+
 # Strongest TiO bands from Valenti et al. 1998
 # http://adsabs.harvard.edu/abs/1998ApJ...498..851V
-#strong_lines = u.Quantity([5598.410, 7054.327, 7087.598, 7125.585], u.Angstrom)
-
 strong_lines = u.Quantity([5598.410, 7054.189, 7087.598, 7125.585, 8859.802], u.Angstrom)
 
 band_bounds = u.Quantity([[-2, 2], [-1, 1], [-1, 1], [-2, 2], [-2, 2]], u.Angstrom)
-#band_bounds = u.Quantity([[-1, 1], [-1, 1], [-1, 1], [-1, 1]], u.Angstrom)
-#band_bounds = u.Quantity([[-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5], [-0.5, 0.5]], u.Angstrom)
 
 bands_TiO = [Band(c, c+bounds[0], c+bounds[1])
              for c, bounds in zip(strong_lines, band_bounds)]
 
-balmer_series = u.Quantity([4102, 4341, 4861, 6562.8], u.Angstrom)
-balmer_bounds = u.Quantity(len(balmer_series) * [[-2, 2]], u.Angstrom)
+# https://physics.nist.gov/PhysRefData/Handbook/Tables/hydrogentable2.htm
+balmer_series = u.Quantity([4101.74, 4340.462, 4861.3615, 6562.8518], u.Angstrom)
+balmer_bounds = u.Quantity(len(balmer_series) * [[-1, 1]], u.Angstrom)
 bands_balmer = [Band(c, c+bounds[0], c+bounds[1])
                 for c, bounds in zip(balmer_series, balmer_bounds)]

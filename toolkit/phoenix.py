@@ -311,7 +311,8 @@ class PHOENIXModelGrid(object):
                   self.metallicities)
         values = dset[np.where(interp_bounds)[0], :, :, :][:]
 
-        rgi = RegularGridInterpolator(points, values, bounds_error=False)
+        rgi = RegularGridInterpolator(points, values, bounds_error=False,
+                                      fill_value=None)
         self._rgi = rgi
 
     def interp(self, temperature, gravity, metallicity, wavelengths=None,
