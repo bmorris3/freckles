@@ -6,7 +6,8 @@ from __future__ import (absolute_import, division, print_function,
 
 import matplotlib.pyplot as plt
 import numpy as np
-
+import os
+import h5py
 from astropy.io import fits
 import astropy.units as u
 from astropy.time import Time
@@ -17,7 +18,7 @@ from scipy.signal import gaussian, argrelmax
 from scipy.interpolate import interp1d
 
 from .spectral_type import query_for_T_eff
-from .phoenix import get_phoenix_model_spectrum
+from .phoenix import get_phoenix_model_spectrum, get_phoenix_model_wavelengths
 from .masking import get_spectrum_mask
 from .activity import true_h_centroid, true_k_centroid
 
@@ -28,6 +29,9 @@ __all__ = ["EchelleSpectrum", "slice_spectrum", "interpolate_spectrum",
 approx_resolution_ratio = 2 #@6.4122026154034
 smoothing_kernel = gaussian(int(5*approx_resolution_ratio),
                             approx_resolution_ratio)
+spectra_path = os.path.abspath(os.path.join(os.path.dirname(__file__),
+                                            os.pardir, 'data',
+                                            'spectra.hdf5'))
 
 
 class Spectrum1D(Spec1D):
@@ -75,6 +79,15 @@ class Spectrum1D(Spec1D):
             return self.flux[self.mask]
         else:
             return self.flux
+
+    @classmethod
+    def from_hdf5(cls, target, index, path=spectra_path):
+        f = h5py.File(path, 'r')
+        keys = list(f[target])
+        wavelength = f[target][keys[index]]['wavelength'][:] * u.Angstrom
+        flux = f[target][keys[index]]['flux'][:]
+        f.close()
+        return super(Spectrum1D, cls).from_array(wavelength, flux)
 
 
 class EchelleSpectrum(object):
@@ -420,6 +433,16 @@ class SimpleSpectrum(object):
         #                                dispersion_unit=self.wavelength.unit)
         #
 
+    @classmethod
+    def from_hdf5(cls, target, index, path=spectra_path):
+        f = h5py.File(path, 'r')
+        keys = list(f[target])
+        wavelength = f[target][keys[index]]['wavelength'][:] * u.Angstrom
+        flux = f[target][keys[index]]['flux'][:]
+        f.close()
+        return cls(wavelength, flux)
+
+
 def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None):
     """
     Return a slice of a spectrum on a smaller wavelength range.
@@ -541,6 +564,9 @@ def cross_corr(target_spectrum, model_spectrum, kernel_width):
 
 def concatenate_spectra(spectrum_list):
     wavelength = np.concatenate([sp.wavelength.value for sp in spectrum_list])
-    flux = np.concatenate([sp.flux.value for sp in spectrum_list])
+    if hasattr(spectrum_list[0].flux, 'unit'):
+        flux = np.concatenate([sp.flux.value for sp in spectrum_list])
+    else:
+        flux = np.concatenate([sp.flux for sp in spectrum_list])
     return SimpleSpectrum(u.Quantity(wavelength, u.Angstrom), flux)
 

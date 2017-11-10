@@ -9,7 +9,7 @@ import astropy.units as u
 from scipy.interpolate import RectBivariateSpline, RegularGridInterpolator
 
 __all__ = ['get_phoenix_model_spectrum', 'phoenix_model_temps',
-           'ModelGrid']
+           'ModelGrid', 'PHOENIXModelGrid']
 
 phoenix_model_temps = np.array(
     [1200, 1300, 1400, 1500, 1600, 1700, 1800, 1900, 2000, 2050, 2100,
@@ -311,7 +311,7 @@ class PHOENIXModelGrid(object):
                   self.metallicities)
         values = dset[np.where(interp_bounds)[0], :, :, :][:]
 
-        rgi = RegularGridInterpolator(points, values)
+        rgi = RegularGridInterpolator(points, values, bounds_error=False)
         self._rgi = rgi
 
     def interp(self, temperature, gravity, metallicity, wavelengths=None,
@@ -399,7 +399,6 @@ class PHOENIXModelGrid(object):
             wavelengths = self.wavelengths
         flux = self.interp(temperature, gravity, metallicity, method=method,
                            wavelengths=wavelengths)
-        from .spectra import Spectrum1D
-        return Spectrum1D.from_array(wavelengths if hasattr(wavelengths, 'unit')
-                                     else u.Quantity(wavelengths, u.Angstrom),
-                                     flux)
+        from .spectra import SimpleSpectrum
+        return SimpleSpectrum(wavelengths if hasattr(wavelengths, 'unit')
+                              else u.Quantity(wavelengths, u.Angstrom), flux)

@@ -3,7 +3,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import astropy.units as u
 
-__all__ = ['Band', 'bands_TiO']
+__all__ = ['Band', 'bands_TiO', 'bands_balmer']
 
 
 class Band(object):
@@ -25,3 +25,8 @@ band_bounds = u.Quantity([[-2, 2], [-1, 1], [-1, 1], [-2, 2], [-2, 2]], u.Angstr
 
 bands_TiO = [Band(c, c+bounds[0], c+bounds[1])
              for c, bounds in zip(strong_lines, band_bounds)]
+
+balmer_series = u.Quantity([4102, 4341, 4861, 6562.8], u.Angstrom)
+balmer_bounds = u.Quantity(len(balmer_series) * [[-2, 2]], u.Angstrom)
+bands_balmer = [Band(c, c+bounds[0], c+bounds[1])
+                for c, bounds in zip(balmer_series, balmer_bounds)]
