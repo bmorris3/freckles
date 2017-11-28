@@ -29,7 +29,10 @@ bands_TiO = [Band(c, c+bounds[0], c+bounds[1])
              for c, bounds in zip(strong_lines, band_bounds)]
 
 # https://physics.nist.gov/PhysRefData/Handbook/Tables/hydrogentable2.htm
-balmer_series = u.Quantity([4101.74, 4340.462, 4861.3615, 6562.8518], u.Angstrom)
-balmer_bounds = u.Quantity(len(balmer_series) * [[-1, 1]], u.Angstrom)
+# removed: 4101.74
+#balmer_series = u.Quantity([4340.462, 4861.3615, 6562.8518], u.Angstrom)
+#balmer_bounds = u.Quantity([[-1, 1], [-1, 1], [-2, 2]], u.Angstrom)
+balmer_series = u.Quantity([4340.462, 4861.3615, 6562.8518, 6562.8518], u.Angstrom)
+balmer_bounds = u.Quantity([[-1, 1], [-1, 1], [-2, -0.5], [0.5, 2]], u.Angstrom)
 bands_balmer = [Band(c, c+bounds[0], c+bounds[1])
                 for c, bounds in zip(balmer_series, balmer_bounds)]

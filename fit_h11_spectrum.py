@@ -73,9 +73,10 @@ def lnlike(theta):
     model, residuals = instr_model(teff, logg, z, lam_0, lam_1, res, slices)
 
     # Source: http://dan.iel.fm/emcee/current/user/line/#maximum-likelihood-estimation
-    #inv_sigma2 = 1.0 / (yerr**2 + np.exp(2*lnf))
-    inv_sigma2 = 1.0 / (yerr**2 + model**2*np.exp(2*lnf))
+    inv_sigma2 = 1.0 / (yerr**2 + np.exp(2*lnf))
+    #inv_sigma2 = 1.0 / (yerr**2 + model**2*np.exp(2*lnf))
     return -0.5*np.sum((model - slices.flux)**2 * inv_sigma2 - np.log(inv_sigma2))
+
 
 def lnprob(theta):
     lp = lnprior(theta)
@@ -105,7 +106,7 @@ pos1 = sampler.run_mcmc(pos, 1000)[0]#, rstate0=np.random.get_state())
 
 print("Running MCMC...")
 sampler.reset()
-pos2 = sampler.run_mcmc(pos1, 10000)[0]
+pos2 = sampler.run_mcmc(pos1, 20000)[0]
 end = time.time()
 print("runtime", (end-start)/60)
 print("MCMC done")
