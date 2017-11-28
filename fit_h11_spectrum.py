@@ -59,9 +59,9 @@ def instr_model(teff, logg, z, lam_0, lam_1, res, observed_spectrum):
 
 def lnprior(theta):
     teff, logg, z, lam_0, lam_1, lnf, res = theta
-    if ((4000 < teff < 5200) and (4 < logg < 5) and (-0.5 < z < 0.5) and
+    if ((4000 < teff < 5500) and (4 < logg < 6) and (0.31-2*0.05 < z < 0.31+2*0.05) and
         (-1 < lam_0 < 1) and (-1 < lam_1 < 1) and
-        (-10 < lnf < -1) and (0.5 < res < 3)):
+        (-10 < lnf < -1) and (0.5 < res < 2)):
         return 0.0
     return -np.inf
 
@@ -73,9 +73,9 @@ def lnlike(theta):
     model, residuals = instr_model(teff, logg, z, lam_0, lam_1, res, slices)
 
     # Source: http://dan.iel.fm/emcee/current/user/line/#maximum-likelihood-estimation
-    inv_sigma2 = 1.0 / (yerr**2 + np.exp(2*lnf))
+    #inv_sigma2 = 1.0 / (yerr**2 + np.exp(2*lnf))
+    inv_sigma2 = 1.0 / (yerr**2 + model**2*np.exp(2*lnf))
     return -0.5*np.sum((model - slices.flux)**2 * inv_sigma2 - np.log(inv_sigma2))
-
 
 def lnprob(theta):
     lp = lnprior(theta)
@@ -101,7 +101,7 @@ if not pool.is_master():
 sampler = emcee.EnsembleSampler(nwalkers, ndim, lnprob, pool=pool)
 
 print("Running MCMC burn-in...")
-pos1 = sampler.run_mcmc(pos, 250)[0]#, rstate0=np.random.get_state())
+pos1 = sampler.run_mcmc(pos, 1000)[0]#, rstate0=np.random.get_state())
 
 print("Running MCMC...")
 sampler.reset()
@@ -115,5 +115,5 @@ outfile_path = sys.argv[2]
 output_path = os.path.join(outfile_path, 'chains_{0:02d}.txt'.format(int(file_index)))
 lnprob_path = os.path.join(outfile_path, 'lnprob_{0:02d}.txt'.format(int(file_index)))
 np.savetxt(output_path, sampler.flatchain[-10000:, :])
-np.savetxt(lnprob_path, sampler.flatlnprobability[-10000:, :])
+np.savetxt(lnprob_path, sampler.flatlnprobability[-10000:])
 #np.save('lastthousand.txt', sampler.flatchain[-1000:, :])
