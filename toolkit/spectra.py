@@ -412,7 +412,7 @@ class SimpleSpectrum(object):
 
     def convolve(self, kernel=smoothing_kernel):
         convolved_flux = convolve1d(self.flux, kernel)
-        self.flux = convolved_flux/np.median(convolved_flux)
+        self.flux = convolved_flux/np.nanmedian(convolved_flux)
 
     def interpolate(self, new_wavelengths, copy=False, assume_sorted=True):
         interp_function = interp1d(self.wavelength.value, self.flux, copy=copy,
@@ -443,7 +443,8 @@ class SimpleSpectrum(object):
         return cls(wavelength, flux)
 
 
-def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None):
+def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None,
+                   force_length=None):
     """
     Return a slice of a spectrum on a smaller wavelength range.
 
@@ -458,6 +459,8 @@ def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None):
     norm : float
         Normalize the new slice fluxes by ``norm`` divided by the maximum flux
         of the new slice.
+    force_length : int
+        If not `None`, force the length of slice to be ``force_length``
 
     Returns
     -------
@@ -465,6 +468,15 @@ def slice_spectrum(spectrum, min_wavelength, max_wavelength, norm=None):
     """
     in_range = ((spectrum.wavelength < max_wavelength) &
                 (spectrum.wavelength > min_wavelength))
+
+    if force_length is not None:
+        n = np.count_nonzero(in_range)
+        if n - force_length < 0:
+            ind = np.argwhere(np.diff(in_range.astype(int)) < 0)[0][0]
+            in_range[ind+1] = True
+        elif n - force_length > 0:
+            ind = np.argwhere(np.diff(in_range.astype(int)) < 0)[0][0]
+            in_range[ind] = False
 
     wavelength = spectrum.wavelength[in_range]
 

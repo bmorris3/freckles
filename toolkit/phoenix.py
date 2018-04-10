@@ -273,8 +273,8 @@ def get_phoenix_model_wavelengths(cache=True):
     return wavelengths_air
 
 # alpha, beta, gamma delta
-iw_min = [6562.8 - 5, 4861 - 5, 4341 - 5, 4102 - 5]
-iw_max = [6562.8 + 5, 4861 + 5, 4341 + 5, 4102 + 5]
+iw_min = [6562.8 - 5, 4861 - 5, 4341 - 5]
+iw_max = [6562.8 + 5, 4861 + 5, 4341 + 5]
 
 
 class PHOENIXModelGrid(object):
