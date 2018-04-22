@@ -3,7 +3,7 @@ from __future__ import (absolute_import, division, print_function,
 
 import astropy.units as u
 
-__all__ = ['Band', 'bands_TiO', 'bands_balmer']
+__all__ = ['Band', 'bands_TiO', 'bands_off_TiO', 'bands_balmer']
 
 
 class Band(object):
@@ -23,10 +23,15 @@ class Band(object):
 # http://adsabs.harvard.edu/abs/1998ApJ...498..851V
 strong_lines = u.Quantity([5598.410, 7054.189, 7087.598, 7125.585, 8859.802], u.Angstrom)
 
-band_bounds = u.Quantity([[-2, 2], [-1, 1], [-1, 1], [-2, 2], [-2, 2]], u.Angstrom)
+band_bounds = u.Quantity([[-1, 1], [-1, 1], [-1, 1], [-1, 1], [-2, 2]], u.Angstrom)
 
 bands_TiO = [Band(c, c+bounds[0], c+bounds[1])
              for c, bounds in zip(strong_lines, band_bounds)]
+
+off_band = 3
+bands_off_TiO = [Band(c+off_band*u.Angstrom, c+bounds[0]+off_band*u.Angstrom,
+                      c+bounds[1]+off_band*u.Angstrom)
+                 for c, bounds in zip(strong_lines, band_bounds)]
 
 # https://physics.nist.gov/PhysRefData/Handbook/Tables/hydrogentable2.htm
 # removed: 4101.74
