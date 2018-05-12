@@ -28,7 +28,7 @@ band_bounds = u.Quantity([[-1, 1], [-1, 1], [-1, 1], [-1, 1], [-2, 2]], u.Angstr
 bands_TiO = [Band(c, c+bounds[0], c+bounds[1])
              for c, bounds in zip(strong_lines, band_bounds)]
 
-off_band = 3
+off_band = 5
 bands_off_TiO = [Band(c+off_band*u.Angstrom, c+bounds[0]+off_band*u.Angstrom,
                       c+bounds[1]+off_band*u.Angstrom)
                  for c, bounds in zip(strong_lines, band_bounds)]

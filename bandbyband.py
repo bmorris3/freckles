@@ -1,7 +1,5 @@
 import matplotlib.pyplot as plt
 import numpy as np
-import emcee
-from scipy.ndimage import gaussian_filter1d
 import astropy.units as u
 from emcee import EnsembleSampler
 
@@ -9,8 +7,7 @@ import h5py
 from corner import corner
 from astropy.modeling.blackbody import blackbody_lambda
 from toolkit import (slice_spectrum, concatenate_spectra, bands_TiO,
-                     instr_model, SimpleSpectrum, model_known_lambda,
-                     bands_balmer, bands_off_TiO)
+                     instr_model, SimpleSpectrum, model_known_lambda)
 
 archive = h5py.File('/Users/bmmorris/git/aesop/notebooks/spectra.hdf5', 'r+')
 
@@ -21,15 +18,29 @@ from json import load
 
 star_temps = load(open('star_temps.json', 'r'))
 
-# Set additional width in angstroms centered on band core, used for wavelength calibration
+# Set additional width in angstroms centered on band core,
+# used for wavelength calibration
 width = 10
 bands = bands_TiO
 yerr = 0.001
+
+# Set width where fitting will occur
 fit_width = 3*u.Angstrom
 
 results = dict()
 
+
+
+
 for star in stars:
+    phot_temp = star_temps[star]
+
+    comparison_temp_high = star_temps[stars[star][0][0]]
+    comparison_temp_low = star_temps[stars[star][1][0]]
+
+    mixture_coefficient = ((phot_temp - comparison_temp_low) /
+                           (comparison_temp_high - comparison_temp_low))
+
     # Book keeping:
     target_name = star
     comp1_name = stars[star][0][0]
@@ -65,7 +76,8 @@ for star in stars:
     # Slice the spectra into chunks centered on each TiO band:
     spec_band = []
     for band in bands:
-        target_slice = slice_spectrum(target, band.min-width*u.Angstrom, band.max+width*u.Angstrom)
+        target_slice = slice_spectrum(target, band.min-width*u.Angstrom,
+                                      band.max+width*u.Angstrom)
         target_slice.flux /= target_slice.flux.max()
         spec_band.append(target_slice)
 
@@ -73,7 +85,8 @@ for star in stars:
 
     spec_band = []
     for band, inds in zip(bands, target_slices.wavelength_splits):
-        target_slice = slice_spectrum(source1, band.min-width*u.Angstrom, band.max+width*u.Angstrom,
+        target_slice = slice_spectrum(source1, band.min-width*u.Angstrom,
+                                      band.max+width*u.Angstrom,
                                       force_length=abs(np.diff(inds))[0])
         target_slice.flux /= np.percentile(target_slice.flux, 98)
         spec_band.append(target_slice)
@@ -82,7 +95,8 @@ for star in stars:
 
     spec_band = []
     for band, inds in zip(bands, target_slices.wavelength_splits):
-        target_slice = slice_spectrum(source2, band.min-width*u.Angstrom, band.max+width*u.Angstrom,
+        target_slice = slice_spectrum(source2, band.min-width*u.Angstrom,
+                                      band.max+width*u.Angstrom,
                                       force_length=abs(np.diff(inds))[0])
         target_slice.flux /= np.percentile(target_slice.flux, 98)
         spec_band.append(target_slice)
@@ -137,6 +151,7 @@ for star in stars:
         def lnlike(theta, target, source1, source2):
             area, f = theta
             model, residuals = model_known_lambda(target, source1, source2,
+                                                  mixture_coefficient,
                                                   area, source1_dlambdas,
                                                   source2_dlambdas, band, inds,
                                                   width=fit_width,
@@ -159,7 +174,7 @@ for star in stars:
             if np.isfinite(lnprior(realization)):
                 pos.append(realization)
 
-        sampler = EnsembleSampler(nwalkers, ndim, lnprob, #threads=8,
+        sampler = EnsembleSampler(nwalkers, ndim, lnprob, threads=8,
                                   args=(target_slices, source1_slices,
                                         source2_slices))
 
