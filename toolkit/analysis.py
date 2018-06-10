@@ -5,11 +5,12 @@ import numpy as np
 import astropy.units as u
 from scipy.signal import gaussian
 from copy import deepcopy
+import matplotlib.pyplot as plt
 
-from .spectra import SimpleSpectrum
+from .spectra import SimpleSpectrum, slice_spectrum, concatenate_spectra
 
-__all__ = ["instr_model", "combine_spectra", "match_spectra",
-           "model_known_lambdas", 'model_known_lambda']
+__all__ = ["instr_model", "combine_spectra", "match_spectra", "get_slices_dlambdas",
+           "model_known_lambdas", 'model_known_lambda', 'plot_posterior_samples']
 
 err_bar = 0.025
 
@@ -183,7 +184,7 @@ def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
 
     # Create a mixture of the hotter and cooler atmospheres with the correct
     # effective temperature for the photosphere of the star
-    phot_mixture = combine_spectra(model_phot, model_spot, 1 - mixture_coeff)
+    phot_mixture = combine_spectra(model_phot, model_spot, mixture_coeff)
 
     # Then combine the composite template photosphere model with some more
     # of the cooler star component to represent starspot coverage
@@ -200,8 +201,11 @@ def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
 
     # mean_wavelength = np.mean(observed_spectrum.wavelength[i_min:i_max][in_range]).value
     lam = observed_spectrum.wavelength[i_min:i_max].value - band.core.value#mean_wavelength
-    a = np.vstack([combined_interp[i_min:i_max][in_range]]).T
-    a_all = np.vstack([combined_interp[i_min:i_max]]).T #
+    # a = np.vstack([combined_interp[i_min:i_max][in_range]]).T
+    # a_all = np.vstack([combined_interp[i_min:i_max]]).T
+
+    a = np.vstack([combined_interp[i_min:i_max][in_range], lam[in_range]]).T
+    a_all = np.vstack([combined_interp[i_min:i_max], lam]).T #
 
     b = observed_spectrum.flux[i_min:i_max][in_range]
 
@@ -315,3 +319,137 @@ def combine_spectra(spectrum_phot, spectrum_spot, spotted_area):
     return SimpleSpectrum(spectrum_phot.wavelength, combined_flux,
                           dispersion_unit=spectrum_phot.dispersion_unit)
 
+
+def plot_posterior_samples(samples, target_slices, source1_slices, source2_slices, mixture_coefficient,
+                           source1_dlambdas, source2_dlambdas, band, inds, fit_width, star):
+    yerr_eff = np.median(samples[:, 1])
+    fig, ax = plt.subplots(1, 2, figsize=(10, 5))
+
+    nospots, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, 0,
+                                             source1_dlambdas, source2_dlambdas, band, inds,
+                                             width=fit_width, uncertainty=yerr_eff)
+    allspots, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, 1,
+                                              source1_dlambdas, source2_dlambdas, band, inds,
+                                              width=fit_width, uncertainty=yerr_eff)
+    min_ind, max_ind = inds
+
+    for j in range(2):
+        ax[j].errorbar(target_slices.wavelength[min_ind:max_ind].value,
+                          target_slices.flux[min_ind:max_ind],
+                          yerr_eff*np.ones_like(target_slices.flux[min_ind:max_ind]),
+                          fmt='o', color='k', zorder=-100, alpha=1 if j else 0.1)
+                       #0.025*np.ones(max_ind-min_ind), fmt='.')
+    #     ax[i].plot(target_slices.wavelength[min_ind:max_ind],
+    #                best_model[min_ind:max_ind], color='r')
+
+        ax[j].plot(target_slices.wavelength[min_ind:max_ind],# + dlam1*u.Angstrom,
+                   nospots[min_ind:max_ind], color='C1', lw=2, ls='--', zorder=10)#, color='r')
+        ax[j].plot(target_slices.wavelength[min_ind:max_ind],# + dlam2*u.Angstrom,
+                   allspots[min_ind:max_ind],  color='C2', lw=2, zorder=10)#, color='r')
+
+    ax[0].axvspan((band.core-fit_width/2).value, (band.core+fit_width/2).value, alpha=0.05, color='k')
+    ax[0].set_xlim([(band.core-2*fit_width).value, (band.core+2*fit_width).value])
+
+    # ax[0].set_xlim([target_slices.wavelength[min_ind].value,
+    #                target_slices.wavelength[max_ind-1].value])
+
+    ax[1].set_xlim([(band.core-fit_width/2).value, (band.core+fit_width/2).value])
+
+#     ax[i, 1].set_ylim([0.99*rand_model[min_ind:max_ind].min(), 1.01*rand_model[min_ind:max_ind].max()])
+
+    in_range = ((band.core-fit_width/2 < target_slices.wavelength[min_ind:max_ind]) &
+               (band.core+fit_width/2 > target_slices.wavelength[min_ind:max_ind]))
+
+    ax[0].set_ylim([0.5*target_slices.flux[min_ind:max_ind][in_range].min(),
+                       1.2*target_slices.flux[min_ind:max_ind][in_range].max()])
+
+    ax[1].set_ylim([0.5*target_slices.flux[min_ind:max_ind][in_range].min(),
+                       1.2*target_slices.flux[min_ind:max_ind][in_range].max()])
+
+    plt.setp(ax[0].get_xticklabels(), rotation=20, ha='right')
+    plt.setp(ax[1].get_xticklabels(), rotation=20, ha='right')
+
+    n_random_draws = 100
+    # draw models from posteriors
+    for j in range(n_random_draws):
+        step = np.random.randint(0, samples.shape[0])
+        random_step = samples[step, 0]
+        try:
+
+            rand_model, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, random_step,#np.exp(random_step),
+                                                        source1_dlambdas, source2_dlambdas, band, inds,
+                                                        width=fit_width, uncertainty=yerr_eff)
+        except np.linalg.linalg.LinAlgError:
+            pass
+        for i, inds in enumerate(target_slices.wavelength_splits):
+            min_ind, max_ind = inds
+            for j in range(2):
+                ax[1].plot(target_slices.wavelength[min_ind:max_ind],
+                              rand_model[min_ind:max_ind], color='#389df7', alpha=0.1)#, zorder=10)
+    fig.subplots_adjust(hspace=0.5)
+    return fig, ax
+
+
+def get_slices_dlambdas(bands, width, target, source1, source2):
+    spec_band = []
+    for band in bands:
+        target_slice = slice_spectrum(target, band.min-width*u.Angstrom,
+                                      band.max+width*u.Angstrom)
+        target_slice.flux /= target_slice.flux.max()
+        spec_band.append(target_slice)
+
+    target_slices = concatenate_spectra(spec_band)
+
+    spec_band = []
+    for band, inds in zip(bands, target_slices.wavelength_splits):
+        target_slice = slice_spectrum(source1, band.min-width*u.Angstrom,
+                                      band.max+width*u.Angstrom,
+                                      force_length=abs(np.diff(inds))[0])
+        target_slice.flux /= np.percentile(target_slice.flux, 98)
+        spec_band.append(target_slice)
+
+    source1_slices = concatenate_spectra(spec_band)
+
+    spec_band = []
+    for band, inds in zip(bands, target_slices.wavelength_splits):
+        target_slice = slice_spectrum(source2, band.min-width*u.Angstrom,
+                                      band.max+width*u.Angstrom,
+                                      force_length=abs(np.diff(inds))[0])
+        target_slice.flux /= np.percentile(target_slice.flux, 98)
+        spec_band.append(target_slice)
+
+    source2_slices = concatenate_spectra(spec_band)
+
+    # Update the wavelength solution for each TiO band slice
+    n_bands = len(bands)
+
+    init_model = instr_model(target_slices, source1_slices, source2_slices, 0,
+                             *[0]*n_bands)[0]
+
+    source1_dlambdas = []
+    for i, inds in enumerate(target_slices.wavelength_splits):
+        min_ind, max_ind = inds
+
+        chi2s = []
+        for j in range(len(init_model[min_ind:max_ind])):
+            chi2s.append(np.sum((target_slices.flux[min_ind:max_ind] -
+                                 np.roll(init_model[min_ind:max_ind], j))**2))
+
+        dlambda = np.median(np.diff(target_slices.wavelength[min_ind:max_ind])) * np.argmin(chi2s)
+        source1_dlambdas.append(-dlambda.value)
+
+    init_model = instr_model(target_slices, source1_slices, source2_slices, 1,
+                             *[0]*n_bands)[0]
+    source2_dlambdas = []
+    for i, inds in enumerate(target_slices.wavelength_splits):
+        min_ind, max_ind = inds
+
+        chi2s = []
+        for j in range(len(init_model[min_ind:max_ind])):
+            chi2s.append(np.sum((target_slices.flux[min_ind:max_ind] -
+                                 np.roll(init_model[min_ind:max_ind], j))**2))
+
+        dlambda = np.median(np.diff(target_slices.wavelength[min_ind:max_ind])) * np.argmin(chi2s)
+        source2_dlambdas.append(-dlambda.value)
+
+    return target_slices, source1_slices, source2_slices, source1_dlambdas, source2_dlambdas
