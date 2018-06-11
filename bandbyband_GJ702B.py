@@ -16,14 +16,10 @@ from toolkit import (get_slices_dlambdas, bands_TiO,
 
 archive = h5py.File('/Users/bmmorris/git/aesop/notebooks/spectra.hdf5', 'r+')
 
-eqvir_comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
-                     ['GJ4099', '2017-09-05T06:43:40.051']]
-# eqvir_comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
-#                      ['HD221639', '2017-09-11T04:29:39.170']]  # Spot template
-# eqvir_comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
-#                      ['HD38230', '2017-11-06T10:37:26.329']]  # Spot template
+eqvir_comparisons = [['HD145675', '2018-06-01T04:54:33.780'],  # Photosphere template
+                     ['GJ4099', '2017-09-05T06:43:40.051']]#['HD145742', '2018-06-01T05:09:53.040']]  # Spot template
 
-star = 'EKDra'
+star = 'GJ702B'
 
 stars = {star: eqvir_comparisons}
 

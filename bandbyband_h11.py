@@ -46,13 +46,13 @@ star_temps = load(open('star_temps.json', 'r'))
 
 # Set additional width in angstroms centered on band core,
 # used for wavelength calibration
-roll_width = 20#35
+roll_width = 35
 bands = bands_TiO[:-1]
 yerr = 0.001
-force_refit = False #True
+force_refit = False#True
 
 # Set width where fitting will occur
-fit_width = 1.5*u.Angstrom
+fit_width = 3*u.Angstrom #1.5
 
 
 path = 'bandbyband_h11_results.json'
@@ -124,7 +124,7 @@ for time in times[4:]:
 
             def lnprior(theta):
                 area, f = theta
-                if 0 <= area*R_lambda <= 0.5 and 0 < f: #lnf < 0:
+                if 0 <= area*R_lambda <= 1.0 and 0 < f: #lnf < 0:
                     return 0.0
                 return -np.inf
 
@@ -154,10 +154,6 @@ for time in times[4:]:
                 if np.isfinite(lnprior(realization)):
                     pos.append(realization)
 
-            # pool = MPIPool(loadbalance=True)
-            # if not pool.is_master():
-            #     pool.wait()
-            #     sys.exit(0)
 
             sampler = EnsembleSampler(nwalkers, ndim, lnprob, threads=8,
                                       args=(target_slices, source1_slices,

@@ -16,16 +16,12 @@ from toolkit import (get_slices_dlambdas, bands_TiO,
 
 archive = h5py.File('/Users/bmmorris/git/aesop/notebooks/spectra.hdf5', 'r+')
 
-eqvir_comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
-                     ['GJ4099', '2017-09-05T06:43:40.051']]
-# eqvir_comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
-#                      ['HD221639', '2017-09-11T04:29:39.170']]  # Spot template
-# eqvir_comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
-#                      ['HD38230', '2017-11-06T10:37:26.329']]  # Spot template
+comparisons = [["GJ705", '2018-06-01T05:31:48.119'],  # Photosphere template
+               ['HD209290', '2016-09-18T06:05:55.740']]  # Spot template
 
-star = 'EKDra'
+star = 'HD151288'
 
-stars = {star: eqvir_comparisons}
+stars = {star: comparisons}
 
 from json import load, dump
 
@@ -33,13 +29,13 @@ star_temps = load(open('star_temps.json', 'r'))
 
 # Set additional width in angstroms centered on band core,
 # used for wavelength calibration
-roll_width = 20#35
+roll_width = 50
 bands = bands_TiO[:-1]
 yerr = 0.001
 force_refit = True
 
 # Set width where fitting will occur
-fit_width = 1.5*u.Angstrom
+fit_width = 3*u.Angstrom
 
 
 path = 'bandbyband_{0}_results.json'.format(star)
@@ -96,6 +92,7 @@ for time in times:
 
         # Slice the spectra into chunks centered on each TiO band:
         slicesdlambdas = get_slices_dlambdas(bands, roll_width, target, source1, source2)
+        print(slicesdlambdas)
         target_slices, source1_slices, source2_slices, source1_dlambdas, source2_dlambdas = slicesdlambdas
 
         time_results = dict()

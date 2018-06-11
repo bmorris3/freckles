@@ -79,89 +79,6 @@ def instr_model(observed_spectrum, model_phot, model_spot, spotted_area,
 
     return combined_scaled, residuals
 
-#
-#
-# def model_known_lambdas(observed_spectrum, model_phot, model_spot, spotted_area,
-#                         lam_offsets_0, lam_offsets_1, bands, width=1*u.Angstrom,
-#                         uncertainty=None):#,
-#                 #res, *lam_offsets, err_bar=err_bar):
-#                 # lam_offset, res, err_bar=err_bar):
-#
-#     model_phot = deepcopy(model_phot)
-#     model_spot = deepcopy(model_spot)
-#     #
-#     # Kernel for instrumental/rotational broadening profile:
-#     #kernel_0 = gaussian_kernel(50, res)
-#     # observed_spectrum = deepcopy(observed_spectrum)
-#     # observed_spectrum.convolve(kernel=kernel_0)
-#
-#     #combined_spectrum = combine_spectra(model_phot, model_spot, spotted_area)
-#     # combined_spectrum.convolve(kernel=kernel_0)
-#
-#     # Apply wavelength correction just to red wavelengths:
-#
-#     for spectrum, lam_offsets in zip([model_phot, model_spot],
-#                                      [lam_offsets_0, lam_offsets_1]):
-#         corrected_wavelengths = spectrum.wavelength.copy()
-#
-#         for i, inds in enumerate(spectrum.wavelength_splits):
-#             min_ind, max_ind = inds
-#             corrected_wavelengths[min_ind:max_ind] -= lam_offsets[i]*u.Angstrom
-#
-#         spectrum.wavelength = corrected_wavelengths.copy()
-#
-#     #corrected_wavelengths = u.Quantity(corrected_wavelengths, u.Angstrom)
-#
-#     combined_spectrum = combine_spectra(model_phot, model_spot, spotted_area)
-#
-#     # combined_interp = combined_spectrum.interpolate(corrected_wavelengths)
-#     combined_interp = combined_spectrum.interpolate(observed_spectrum.wavelength)# -
-#     #                                                 lam_offset*u.Angstrom)
-#
-#     combined_scaled = combined_interp.copy()
-#     combined_wavelengths = []
-#     residuals = 0
-#     for i_minmax, band in zip(observed_spectrum.wavelength_splits, bands):
-#         i_min, i_max = i_minmax
-#         # c, residuals_i = np.linalg.lstsq(combined_interp[i_min:i_max, np.newaxis],
-#         #                                  observed_spectrum.flux[i_min:i_max, np.newaxis])[0:2]
-#         # residuals += residuals_i**2
-#
-#         #a = combined_interp[i_min:i_max, np.newaxis]
-#
-#         in_range = ((observed_spectrum.wavelength[i_min:i_max] < band.core + width/2) &
-#                     (observed_spectrum.wavelength[i_min:i_max] > band.core - width/2))
-#
-#         mean_wavelength = np.mean(observed_spectrum.wavelength[i_min:i_max][in_range]).value
-#         lam = observed_spectrum.wavelength[i_min:i_max].value - band.core.value#mean_wavelength
-#         a = np.vstack([combined_interp[i_min:i_max][in_range]]).T
-#         a_all = np.vstack([combined_interp[i_min:i_max]]).T #
-#
-#         # a = np.vstack([combined_interp[i_min:i_max][in_range], lam[in_range]]).T
-#         #                # np.ones_like(lam[in_range])]).T
-#         # a_all = np.vstack([combined_interp[i_min:i_max], lam]).T
-#         #                    # np.ones_like(lam)]).T
-#
-#         b = observed_spectrum.flux[i_min:i_max][in_range]
-#         #c = np.linalg.inv(a.T @ a) @ a.T @ b  # Ordinary least squares
-#
-#         Omega = np.diag(uncertainty**2 * np.ones_like(lam[in_range]))
-#         inv_Omega = np.linalg.inv(Omega)
-#         c = np.linalg.inv(a.T @ inv_Omega @ a) @ a.T @ inv_Omega @ b  # Ordinary least squares
-#
-#         # from scipy.optimize import nnls
-#         #
-#         # c = nnls(a, b)[0]
-#
-#         residuals += -0.5*np.sum((a @ c - b)**2/uncertainty**2 + np.log(uncertainty**2) + np.log(2*np.pi))
-#
-#         #combined_scaled[i_min:i_max] = combined_interp[i_min:i_max] * c#[0]
-#         combined_scaled[i_min:i_max] = a_all @ c
-#
-#    # residuals /= np.exp(lnf)**2 #err_bar**2
-#
-#     return combined_scaled, residuals
-
 
 def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
                        spotted_area, lam_offsets_0, lam_offsets_1, band,
@@ -264,63 +181,6 @@ def match_spectra(observed_spectrum, comparison_spectrum,
 
     return comparison_scaled, residuals
 
-#  def instr_model(temp_phot, temp_spot, spotted_area, lam_offset, res,
-#                 observed_spectrum, model_grid, err_bar=err_bar):
-#
-#     # Kernel for instrumental broadening profile:
-#     kernel = gaussian(int(5*res), res)
-#
-#     # from .spectra import slice_spectrum
-#     lam_min = observed_spectrum.wavelength.min().value
-#     lam_max = observed_spectrum.wavelength.max().value
-#
-# #    model_phot = model_grid.nearest_spectrum(temp_phot)
-# #    model_phot.slice(lam_min, lam_max)
-# #    model_spot = model_grid.nearest_spectrum(temp_spot)
-# #    model_spot.slice(lam_min, lam_max)
-#
-#     model_phot = model_grid.spectrum(temp_phot)
-#     #model_phot.slice(lam_min, lam_max)
-#     model_spot = model_grid.spectrum(temp_spot)
-#     #model_spot.slice(lam_min, lam_max)
-#
-#     combined_spectrum = combine_spectra(model_phot, model_spot, spotted_area)
-#     combined_spectrum.convolve(kernel=kernel)
-#
-#     # Apply wavelength correction just to red wavelengths:
-#     corrected_wavelengths = observed_spectrum.wavelength.copy()
-#     mid_wavelengths = (corrected_wavelengths > 7000*u.Angstrom) & (corrected_wavelengths < 8500*u.Angstrom)
-# #    blue_wavelengths = np.logical_not(red_wavelengths)
-#     blue_wavelengths = (corrected_wavelengths < 7000*u.Angstrom)
-#     red_wavelengths = corrected_wavelengths > 8500*u.Angstrom
-#     corrected_wavelengths[mid_wavelengths] -= lam_offset*u.Angstrom
-#     corrected_wavelengths[blue_wavelengths] -= (lam_offset + 0.35)*u.Angstrom
-#     corrected_wavelengths[red_wavelengths] -= (lam_offset - 0.35)*u.Angstrom
-#
-#     combined_interp = combined_spectrum.interpolate(corrected_wavelengths)
-#     # combined_interp = combined_spectrum.interpolate(observed_spectrum.wavelength -
-#     #                                                 lam_offset*u.Angstrom)
-#
-#     combined_scaled = combined_interp.copy()
-#     residuals = 0
-#     for i_min, i_max in observed_spectrum.wavelength_splits:
-#         c, residuals_i = np.linalg.lstsq(combined_interp[i_min:i_max, np.newaxis],
-#                                          observed_spectrum.flux[i_min:i_max, np.newaxis])[0:2]
-#         residuals += residuals_i
-#         combined_scaled[i_min:i_max] = combined_interp[i_min:i_max] * c[0]
-#
-#     residuals /= err_bar**2
-#
-#     return combined_scaled, residuals
-
-
-# def combine_spectra(spectrum_phot, spectrum_spot, spotted_area):
-#     combined_flux = (spectrum_phot.flux * (1 - spotted_area) +
-#                      spectrum_spot.flux * spotted_area)
-#     return SimpleSpectrum(spectrum_phot.wavelength, combined_flux,
-#                           dispersion_unit=spectrum_phot.dispersion_unit)
-
-
 def combine_spectra(spectrum_phot, spectrum_spot, spotted_area):
     spectrum_spot_interp = np.interp(spectrum_phot.wavelength.value,
                                      spectrum_spot.wavelength.value,
@@ -400,88 +260,6 @@ def plot_posterior_samples(samples, target_slices, source1_slices, source2_slice
     fig.subplots_adjust(hspace=0.5)
     return fig, ax
 
-
-# def get_slices_dlambdas(bands, width, target, source1, source2):
-#     spec_band = []
-#     for band in bands:
-#         target_slice = slice_spectrum(target, band.min-width*u.Angstrom,
-#                                       band.max+width*u.Angstrom)
-#         target_slice.flux /= target_slice.flux.max()
-#         spec_band.append(target_slice)
-#
-#     target_slices = concatenate_spectra(spec_band)
-#
-#     spec_band = []
-#     for band, inds in zip(bands, target_slices.wavelength_splits):
-#         target_slice = slice_spectrum(source1, band.min-width*u.Angstrom,
-#                                       band.max+width*u.Angstrom,
-#                                       force_length=abs(np.diff(inds))[0])
-#         target_slice.flux /= np.percentile(target_slice.flux, 98)
-#         spec_band.append(target_slice)
-#
-#     source1_slices = concatenate_spectra(spec_band)
-#
-#     spec_band = []
-#     for band, inds in zip(bands, target_slices.wavelength_splits):
-#         target_slice = slice_spectrum(source2, band.min-width*u.Angstrom,
-#                                       band.max+width*u.Angstrom,
-#                                       force_length=abs(np.diff(inds))[0])
-#         target_slice.flux /= np.percentile(target_slice.flux, 98)
-#         spec_band.append(target_slice)
-#
-#     source2_slices = concatenate_spectra(spec_band)
-#
-#     # Update the wavelength solution for each TiO band slice
-#     n_bands = len(bands)
-#
-#     init_model = instr_model(target_slices, source1_slices, source2_slices, 0,
-#                              *[0]*n_bands)[0]
-#
-#     source1_dlambdas = []
-#     for i, inds in enumerate(target_slices.wavelength_splits):
-#         min_ind, max_ind = inds
-#
-#         chi2s = []
-#         for j in range(len(init_model[min_ind:max_ind])):
-#             chi2s.append(np.sum((target_slices.flux[min_ind:max_ind] -
-#                                  np.roll(init_model[min_ind:max_ind], j))**2))
-#         print('start plot')
-#         # plt.figure()
-#         # plt.plot(chi2s)
-#         # plt.show()
-#         print(np.argmin(chi2s))
-#         argmin = np.argmin(chi2s)
-#
-#         if argmin > len(chi2s)/2:
-#             argmin = argmin - len(chi2s)
-#
-#         print(argmin)
-#         dlambda = np.median(np.diff(target_slices.wavelength[min_ind:max_ind])) * argmin #np.argmin(chi2s)
-#         source1_dlambdas.append(-dlambda.value)
-#
-#     init_model = instr_model(target_slices, source1_slices, source2_slices, 1,
-#                              *[0]*n_bands)[0]
-#     source2_dlambdas = []
-#     for i, inds in enumerate(target_slices.wavelength_splits):
-#         min_ind, max_ind = inds
-#
-#         chi2s = []
-#         for j in range(len(init_model[min_ind:max_ind])):
-#             chi2s.append(np.sum((target_slices.flux[min_ind:max_ind] -
-#                                  np.roll(init_model[min_ind:max_ind], j))**2))
-#         # plt.plot(chi2s)
-#         # plt.show()
-#
-#
-#         if argmin > len(chi2s)/2:
-#             argmin = argmin - len(chi2s)
-#
-#         print(argmin)
-#         dlambda = np.median(np.diff(target_slices.wavelength[min_ind:max_ind])) * argmin #np.argmin(chi2s)
-#         source2_dlambdas.append(-dlambda.value)
-#     return target_slices, source1_slices, source2_slices, source1_dlambdas, source2_dlambdas
-
-
 def get_slices_dlambdas(bands, width, target, source1, source2):
     spec_band = []
     for band in bands:
@@ -522,22 +300,14 @@ def get_slices_dlambdas(bands, width, target, source1, source2):
     for i, inds in enumerate(target_slices.wavelength_splits):
         min_ind, max_ind = inds
 
-        # chi2s = []
-        # for j in range(len(init_model[min_ind:max_ind])):
-            # chi2s.append(np.sum((target_slices.flux[min_ind:max_ind] -
-            #                      np.roll(init_model[min_ind:max_ind], j))**2))
-
         corr = np.correlate(init_model_0[min_ind:max_ind] - init_model_0[min_ind:max_ind].mean(),
                             target_slices.flux[min_ind:max_ind] - target_slices.flux[min_ind:max_ind].mean(), mode='full')
 
-        argmin = len(init_model_0[min_ind:max_ind]) - np.argmax(corr)
+        argmax = len(init_model_0[min_ind:max_ind]) - np.argmax(corr)
 
-        print('source1', argmin)
         dlam = target_slices.wavelength[min_ind:max_ind][1] - target_slices.wavelength[min_ind:max_ind][0]
-        #dlambda = np.median(np.diff(target_slices.wavelength[min_ind:max_ind])) * argmin #np.argmin(chi2s)
-        dlambda = dlam * argmin #np.argmin(chi2s)
+        dlambda = dlam * argmax
         source1_dlambdas.append(-dlambda.value)
-        # source1_dlambdas.append(argmin)
 
     init_model_1 = instr_model(target_slices, source1_slices, source2_slices, 1,
                                *[0]*n_bands)[0]
@@ -548,20 +318,10 @@ def get_slices_dlambdas(bands, width, target, source1, source2):
         corr = np.correlate(init_model_1[min_ind:max_ind] - init_model_1[min_ind:max_ind].mean(),
                             target_slices.flux[min_ind:max_ind] - target_slices.flux[min_ind:max_ind].mean(), mode='full')
 
-        argmin = len(init_model_1[min_ind:max_ind]) - np.argmax(corr)
+        argmax = len(init_model_1[min_ind:max_ind]) - np.argmax(corr)
 
-        # fig, ax = plt.subplots(2, 1)
-        # ax[0].plot(target_slices.flux[min_ind:max_ind], '.')
-        # ax[0].plot(np.roll(init_model_1[min_ind:max_ind], argmin))
-        # ax[1].plot(corr)
-        # plt.show()
-
-        print('source2', argmin)
         dlam = target_slices.wavelength[min_ind:max_ind][1] - target_slices.wavelength[min_ind:max_ind][0]
-        #dlambda = np.median(np.diff(target_slices.wavelength[min_ind:max_ind])) * argmin #np.argmin(chi2s)
-        dlambda = dlam * argmin #np.argmin(chi2s)
+        dlambda = dlam * argmax
         source2_dlambdas.append(-dlambda.value)
-        # source2_dlambdas.append(argmin)
 
-    print(source1_dlambdas, source2_dlambdas)
     return target_slices, source1_slices, source2_slices, source1_dlambdas, source2_dlambdas
