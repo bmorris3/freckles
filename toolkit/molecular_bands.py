@@ -21,9 +21,9 @@ class Band(object):
 
 # Strongest TiO bands from Valenti et al. 1998
 # http://adsabs.harvard.edu/abs/1998ApJ...498..851V
-strong_lines = u.Quantity([5598.410, 7054.189, 7087.598, 7125.585, 8859.802], u.Angstrom)
-
-band_bounds = u.Quantity([[-1, 1], [-1, 1], [-1, 1], [-1, 1], [-2, 2]], u.Angstrom)
+strong_lines = u.Quantity([7054.189, 7087.598, 7125.585, 8859.802], u.Angstrom)
+# 5598.410
+band_bounds = u.Quantity([[-0.5, 1.5], [-0.5, 1.5], [-0.5, 1.5], [-0.5, 1.5]], u.Angstrom)
 
 bands_TiO = [Band(c, c+bounds[0], c+bounds[1])
              for c, bounds in zip(strong_lines, band_bounds)]

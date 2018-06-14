@@ -124,8 +124,8 @@ def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
 
     i_min, i_max = input_inds
 
-    in_range = ((observed_spectrum.wavelength[i_min:i_max] < band.core + width/2) &
-                (observed_spectrum.wavelength[i_min:i_max] > band.core - width/2))
+    in_range = ((observed_spectrum.wavelength[i_min:i_max] < band.max + width/2) &
+                (observed_spectrum.wavelength[i_min:i_max] > band.min - width/2))
 
     # mean_wavelength = np.mean(observed_spectrum.wavelength[i_min:i_max][in_range]).value
     lam = observed_spectrum.wavelength[i_min:i_max].value - band.core.value#mean_wavelength
@@ -218,18 +218,18 @@ def plot_posterior_samples(samples, target_slices, source1_slices, source2_slice
         ax[j].plot(target_slices.wavelength[min_ind:max_ind],# + dlam2*u.Angstrom,
                    allspots[min_ind:max_ind],  color='C2', lw=2, zorder=10)#, color='r')
 
-    ax[0].axvspan((band.core-fit_width/2).value, (band.core+fit_width/2).value, alpha=0.05, color='k')
-    ax[0].set_xlim([(band.core-10*fit_width).value, (band.core+10*fit_width).value])
+    ax[0].axvspan((band.min-fit_width/2).value, (band.max+fit_width/2).value, alpha=0.05, color='k')
+    ax[0].set_xlim([(band.min.value-10), (band.max.value+10)])
 
     # ax[0].set_xlim([target_slices.wavelength[min_ind].value,
     #                target_slices.wavelength[max_ind-1].value])
 
-    ax[1].set_xlim([(band.core-fit_width/2).value, (band.core+fit_width/2).value])
+    ax[1].set_xlim([(band.min-fit_width/2).value, (band.max+fit_width/2).value])
 
 #     ax[i, 1].set_ylim([0.99*rand_model[min_ind:max_ind].min(), 1.01*rand_model[min_ind:max_ind].max()])
 
-    in_range = ((band.core-fit_width/2 < target_slices.wavelength[min_ind:max_ind]) &
-               (band.core+fit_width/2 > target_slices.wavelength[min_ind:max_ind]))
+    in_range = ((band.min-fit_width/2 < target_slices.wavelength[min_ind:max_ind]) &
+               (band.max+fit_width/2 > target_slices.wavelength[min_ind:max_ind]))
 
     ax[0].set_ylim([0.5*target_slices.flux[min_ind:max_ind][in_range].min(),
                        1.2*target_slices.flux[min_ind:max_ind][in_range].max()])

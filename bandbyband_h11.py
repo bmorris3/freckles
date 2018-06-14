@@ -43,16 +43,17 @@ stars = {'HATP11': hat11_comparisons}
 from json import load, dump
 
 star_temps = load(open('star_temps.json', 'r'))
+colors = load(open('colors.json', 'r'))
 
 # Set additional width in angstroms centered on band core,
 # used for wavelength calibration
-roll_width = 35
-bands = bands_TiO[:-1]
+roll_width = 10
+bands = bands_TiO#[:-1]
 yerr = 0.001
-force_refit = False#True
+force_refit = False # True
 
 # Set width where fitting will occur
-fit_width = 3*u.Angstrom #1.5
+fit_width = 0*u.Angstrom #1.5
 
 
 path = 'bandbyband_h11_results.json'
@@ -84,6 +85,11 @@ comp2_time = stars[star][1][1]
 target_temp = star_temps[target_name]
 comp1_temp = star_temps[comp1_name]
 comp2_temp = star_temps[comp2_name]
+
+color_error = 0.03
+target_color = colors[target_name]
+comp1_color = colors[comp1_name]
+comp2_color = colors[comp2_name]
 
 # Load spectra from database
 times = list(archive[target_name])
@@ -124,8 +130,12 @@ for time in times[4:]:
 
             def lnprior(theta):
                 area, f = theta
-                if 0 <= area*R_lambda <= 1.0 and 0 < f: #lnf < 0:
-                    return 0.0
+                f_S = area * R_lambda
+
+                net_color = (1 - f_S) * comp1_color + f_S * comp2_color
+
+                if 0 <= f_S <= 1 and 0 < f: #lnf < 0:
+                    return -0.5 * (net_color - target_color)**2/color_error**2
                 return -np.inf
 
             def lnlike(theta, target, source1, source2):
