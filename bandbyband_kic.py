@@ -16,29 +16,16 @@ from toolkit import (get_slices_dlambdas, bands_TiO,
 
 archive = h5py.File('/Users/bmmorris/git/aesop/notebooks/spectra.hdf5', 'r+')
 
-# hat11_comparisons = [['HD127506', '2017-06-15T04:44:33.939'],  # Photosphere template
-#                      ['HD148467', '2017-06-20T06:08:51.240']]  # Spot template
 
-#  HD145742 2018-06-01T05:09:53.040 Gaia DR2=4851
-#  HD82106 2017-03-17T04:44:57.000 Gaia DR2=4749
-#  HD148467 2017-06-20T06:08:51.240 Gaia DR2=4473
-
-# hat11_comparisons = [['HD82106', '2017-03-17T04:44:57.000'],  # Photosphere template
-#                      ['HD148467', '2017-06-20T06:08:51.240']]  # Spot template
-
-# hat11_comparisons = [['HD145742', '2018-06-01T05:09:53.040'],  # Photosphere template
-#                      ['HD148467', '2017-06-20T06:08:51.240']]  # Spot template
+comparisons = [['HD129333', '2017-06-15T04:11:29.600'],  # Photosphere template
+               ["GJ4099", "2017-09-05T06:43:40.051"]]  # Spot template
+# comparisons = [['HD129333', '2017-06-15T04:11:29.600'],  # Photosphere template
+#                ["GJ705", "2018-06-01T05:31:48.119"]]  # Spot template
+# comparisons = [['HD86728', "2016-12-02T09:54:59.720"],  # Photosphere template
+#                ['HD42250', '2017-12-04T10:01:41.909']]  # Spot template
 
 
-# hat11_comparisons = [['HR8832', '2017-09-05T04:40:59.710'],  # Photosphere template
-#                      ['GJ9781A', '2016-09-18T06:31:41.670']]  # Spot template
-
-
-hat11_comparisons = [['HD145742', '2018-06-01T05:09:53.040'],  # Photosphere template
-                     ['GJ705', '2018-06-01T05:31:48.119']]  # Spot template
-
-
-stars = {'HATP11': hat11_comparisons}
+stars = {'KIC9652680': comparisons}
 
 from json import load, dump
 
@@ -50,19 +37,19 @@ colors = load(open('colors.json', 'r'))
 roll_width = 10
 bands = bands_TiO#[:-1]
 yerr = 0.001
-force_refit = False # True
+force_refit = True
 
 # Set width where fitting will occur
 fit_width = 0*u.Angstrom #1.5
 
 
-path = 'bandbyband_h11_results.json'
+path = 'bandbyband_mic_results.json'
 if os.path.exists(path) and not force_refit:
     results = load(open(path, 'r'))
 else:
     results = dict()
 
-star = 'HATP11'
+star = 'KIC9652680'
 phot_temp = star_temps[star]
 
 comparison_temp_high = star_temps[stars[star][0][0]]
@@ -117,6 +104,8 @@ for time in times[4:]:
         # Slice the spectra into chunks centered on each TiO band:
         slicesdlambdas = get_slices_dlambdas(bands, roll_width, target, source1, source2)
         target_slices, source1_slices, source2_slices, source1_dlambdas, source2_dlambdas = slicesdlambdas
+
+        source2_dlambdas = [0]*len(bands)
 
         time_results = dict()
 
@@ -183,7 +172,7 @@ for time in times[4:]:
             band_results['yerr'] = np.median(samples[:, 1])
 
             corner(samples, labels=['$f_S$', '$f$'])
-            plt.savefig('plots_h11/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
+            plt.savefig('plots_kic/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
                                                            time.replace(':', '_')),
                         bbox_inches='tight')
             plt.close()
@@ -192,7 +181,7 @@ for time in times[4:]:
                                              source2_slices, mixture_coefficient,
                                              source1_dlambdas, source2_dlambdas,
                                              band, inds, fit_width, star)
-            plt.savefig('plots_h11/{0}_{1}_{2}_fit.pdf'.format(star, int(band.core.value),
+            plt.savefig('plots_kic/{0}_{1}_{2}_fit.pdf'.format(star, int(band.core.value),
                                                                time.replace(':', '_')),
                         bbox_inches='tight')
             plt.close()

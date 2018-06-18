@@ -28,7 +28,7 @@ stars = load(open('stars.json', 'r'))
 roll_width = 15
 bands = bands_TiO#[:-1]
 yerr = 0.001
-color_error = 0.04
+color_error = 0.02 #0.04
 force_refit = False #True
 
 # Set width where fitting will occur
