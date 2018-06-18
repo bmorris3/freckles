@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 from .spectra import SimpleSpectrum, slice_spectrum, concatenate_spectra
 
 __all__ = ["instr_model", "combine_spectra", "match_spectra", "get_slices_dlambdas",
-           'model_known_lambda', 'plot_posterior_samples']
+           'model_known_lambda', 'plot_posterior_samples', "plot_posterior_samples_for_paper"]
 
 err_bar = 0.025
 
@@ -259,6 +259,90 @@ def plot_posterior_samples(samples, target_slices, source1_slices, source2_slice
                               rand_model[min_ind:max_ind], color='#389df7', alpha=0.1)#, zorder=10)
     fig.subplots_adjust(hspace=0.5)
     return fig, ax
+
+def plot_posterior_samples_for_paper(samples, target_slices, source1_slices, source2_slices, mixture_coefficient,
+                                     source1_dlambdas, source2_dlambdas, band, inds, fit_width, star):
+    yerr_eff = np.median(samples[:, 1])
+    fig, ax = plt.subplots(1, 2, figsize=(8, 3.5))# , sharey=True)
+
+    nospots, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, 0,
+                                             source1_dlambdas, source2_dlambdas, band, inds,
+                                             width=fit_width, uncertainty=yerr_eff)
+    allspots, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, 1,
+                                              source1_dlambdas, source2_dlambdas, band, inds,
+                                              width=fit_width, uncertainty=yerr_eff)
+    min_ind, max_ind = inds
+
+    for j in range(2):
+        ax[j].errorbar(target_slices.wavelength[min_ind:max_ind].value,
+                          target_slices.flux[min_ind:max_ind],
+                          yerr_eff*np.ones_like(target_slices.flux[min_ind:max_ind]),
+                          fmt='o', color='k', zorder=-100, alpha=1, ecolor='silver')# if j else 0.1)
+                       #0.025*np.ones(max_ind-min_ind), fmt='.')
+    #     ax[i].plot(target_slices.wavelength[min_ind:max_ind],
+    #                best_model[min_ind:max_ind], color='r')
+
+        if j == 0:
+            ax[j].plot(target_slices.wavelength[min_ind:max_ind],# + dlam1*u.Angstrom,
+                       nospots[min_ind:max_ind]/np.percentile(nospots[min_ind:max_ind], 98),
+                       color='DodgerBlue', lw=1, zorder=10, label='HD 6497')#, color='r')
+            ax[j].plot(target_slices.wavelength[min_ind:max_ind],# + dlam2*u.Angstrom,
+                       allspots[min_ind:max_ind]/np.percentile(allspots[min_ind:max_ind], 98),
+                       color='r', lw=1, zorder=10, label='GJ 4099')#, color='r')
+    ax[0].legend(loc='lower left')
+    ax[0].axvspan((band.min-fit_width/2).value, (band.max+fit_width/2).value, alpha=0.05, color='k')
+    ax[0].set_xlim([(band.min.value-5), (band.max.value+5)])
+    ax[0].set(xlabel="Wavelength [$\AA$]", ylabel='Flux')
+    # ax[0].set_xlim([target_slices.wavelength[min_ind].value,
+    #                target_slices.wavelength[max_ind-1].value])
+
+    ax[1].set_xlim([(band.min-fit_width/2).value, (band.max+fit_width/2).value])
+
+#     ax[i, 1].set_ylim([0.99*rand_model[min_ind:max_ind].min(), 1.01*rand_model[min_ind:max_ind].max()])
+
+    in_range = ((band.min-fit_width/2 < target_slices.wavelength[min_ind:max_ind]) &
+               (band.max+fit_width/2 > target_slices.wavelength[min_ind:max_ind]))
+
+    ax[0].set_ylim([(allspots[min_ind:max_ind]/np.percentile(allspots[min_ind:max_ind], 98)).min(),
+                    1.01])
+
+    # ax[1].set_ylim([0.5*target_slices.flux[min_ind:max_ind][in_range].min(),
+    #                    1.2*target_slices.flux[min_ind:max_ind][in_range].max()])
+
+    ax[1].set(xlabel='Wavelength [$\AA$]')
+
+    plt.setp(ax[0].get_xticklabels(), rotation=20, ha='right')
+    plt.setp(ax[1].get_xticklabels(), rotation=20, ha='right')
+
+    n_random_draws = 100
+    # draw models from posteriors
+    for k in range(n_random_draws):
+        step = np.random.randint(0, samples.shape[0])
+        random_step = samples[step, 0]
+        try:
+
+            rand_model, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, random_step,#np.exp(random_step),
+                                                        source1_dlambdas, source2_dlambdas, band, inds,
+                                                        width=fit_width, uncertainty=yerr_eff)
+        except np.linalg.linalg.LinAlgError:
+            pass
+        for i, inds in enumerate(target_slices.wavelength_splits):
+            min_ind, max_ind = inds
+            for j in range(2):
+                ax[1].plot(target_slices.wavelength[min_ind:max_ind],
+                              rand_model[min_ind:max_ind], color='gray', alpha=0.05)#,
+                           #label='Mixture' if k == 0 and i == 0 and j == 0 else None)#, zorder=10)color='#389df7',
+    # ax[1].legend(loc='lower right')
+    ax[1].set_ylim([0.7, 1.1])
+    for axis in fig.axes:
+        for s in ['right', 'top']:
+            axis.spines[s].set_visible(False)
+        axis.grid(ls=':')
+    fig.tight_layout()
+    fig.subplots_adjust(hspace=0.5)
+
+    return fig, ax
+
 
 def get_slices_dlambdas(bands, width, target, source1, source2):
     spec_band = []

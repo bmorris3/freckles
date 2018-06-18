@@ -16,28 +16,32 @@ from toolkit import (get_slices_dlambdas, bands_TiO,
 
 archive = h5py.File('/Users/bmmorris/git/aesop/notebooks/spectra.hdf5', 'r+')
 
-# eqvir_comparisons = [['GJ705', '2018-06-01T05:31:48.119'],  # Photosphere template
-#                      ['HD209290', '2016-09-18T06:05:55.740']]  # Spot template
-eqvir_comparisons = [['GJ705', '2018-06-01T05:31:48.119'],  # Photosphere template
-                     ['GJ4099', '2017-09-05T06:43:40.051']]  # Spot template
+# comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
+#                ['GJ4099', '2017-09-05T06:43:40.051']]    # Spot template too cool?
 
-star = 'EQVir'
+# comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
+#                ['HD221639', '2017-09-11T04:29:39.170']]  # Spot template GOES CRAZY
 
-stars = {star: eqvir_comparisons}
+comparisons = [['HD210277', '2017-09-05T06:16:48.990'],  # Photosphere template
+               ['HD38230', '2017-11-06T10:37:26.329']]  # Spot template
+
+star = 'EKDra'
+
+stars = {star: comparisons}
 
 from json import load, dump
 
 star_temps = load(open('star_temps.json', 'r'))
-
+colors = load(open('colors.json', 'r'))
 # Set additional width in angstroms centered on band core,
 # used for wavelength calibration
-roll_width = 20#35
-bands = bands_TiO[:-1]
+roll_width = 15
+bands = bands_TiO#[:-1]
 yerr = 0.001
 force_refit = True
 
 # Set width where fitting will occur
-fit_width = 1.5*u.Angstrom
+fit_width = 0*u.Angstrom
 
 
 path = 'bandbyband_{0}_results.json'.format(star)
@@ -68,6 +72,10 @@ comp2_time = stars[star][1][1]
 target_temp = star_temps[target_name]
 comp1_temp = star_temps[comp1_name]
 comp2_temp = star_temps[comp2_name]
+
+target_color = colors[target_name]
+comp1_color = colors[comp1_name]
+comp2_color = colors[comp2_name]
 
 # Load spectra from database
 times = list(archive[target_name])
@@ -108,8 +116,12 @@ for time in times:
 
             def lnprior(theta):
                 area, f = theta
-                if 0 <= area*R_lambda <= 0.5 and 0 < f: #lnf < 0:
-                    return 0.0
+                f_S = area * R_lambda
+
+                net_color = (1 - f_S) * comp1_color + f_S * comp2_color
+
+                if 0 <= f_S <= 1 and 0 < f: #lnf < 0:
+                    return -0.5 * (net_color - target_color)**2/0.05**2
                 return -np.inf
 
             def lnlike(theta, target, source1, source2):
@@ -161,7 +173,7 @@ for time in times:
             band_results['yerr'] = np.median(samples[:, 1])
 
             corner(samples, labels=['$f_S$', '$f$'])
-            plt.savefig('plots/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
+            plt.savefig('plots_ekdra/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
                                                            time.replace(':', '_')),
                         bbox_inches='tight')
             plt.close()
@@ -170,7 +182,7 @@ for time in times:
                                              source2_slices, mixture_coefficient,
                                              source1_dlambdas, source2_dlambdas,
                                              band, inds, fit_width, star)
-            plt.savefig('plots/{0}_{1}_{2}_fit.pdf'.format(star, int(band.core.value),
+            plt.savefig('plots_ekdra/{0}_{1}_{2}_fit.pdf'.format(star, int(band.core.value),
                                                            time.replace(':', '_')),
                         bbox_inches='tight')
             plt.close()

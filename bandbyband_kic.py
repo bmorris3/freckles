@@ -12,22 +12,33 @@ from corner import corner
 from astropy.modeling.blackbody import blackbody_lambda
 from toolkit import (get_slices_dlambdas, bands_TiO,
                      SimpleSpectrum, model_known_lambda,
-                     plot_posterior_samples_for_paper)
+                     plot_posterior_samples)
 
 archive = h5py.File('/Users/bmmorris/git/aesop/notebooks/spectra.hdf5', 'r+')
 
-# eqvir_comparisons = [['GJ705', '2018-06-01T05:31:48.119'],  # Photosphere template
-#                      ['HD209290', '2016-09-18T06:05:55.740']]  # Spot template
-# eqvir_comparisons = [['GJ705', '2018-06-01T05:31:48.119'],  # Photosphere template
-#                      ['GJ4099', '2017-09-05T06:43:40.051']]  # Spot template
-# eqvir_comparisons = [['HD6497', "2017-11-06T08:38:56.641"],  # Photosphere template
-#                      ['GJ4099', '2017-09-05T06:43:40.051']]  # Spot template
-eqvir_comparisons = [['GJ9781A', '2016-09-18T06:31:41.670'],  # Photosphere template
-                     ['GJ4099', '2017-09-05T06:43:40.051']]  # Spot template
+# hat11_comparisons = [['HD127506', '2017-06-15T04:44:33.939'],  # Photosphere template
+#                      ['HD148467', '2017-06-20T06:08:51.240']]  # Spot template
 
-star = 'EQVir'
+#  HD145742 2018-06-01T05:09:53.040 Gaia DR2=4851
+#  HD82106 2017-03-17T04:44:57.000 Gaia DR2=4749
+#  HD148467 2017-06-20T06:08:51.240 Gaia DR2=4473
 
-stars = {star: eqvir_comparisons}
+# hat11_comparisons = [['HD82106', '2017-03-17T04:44:57.000'],  # Photosphere template
+#                      ['HD148467', '2017-06-20T06:08:51.240']]  # Spot template
+
+# hat11_comparisons = [['HD145742', '2018-06-01T05:09:53.040'],  # Photosphere template
+#                      ['HD148467', '2017-06-20T06:08:51.240']]  # Spot template
+
+
+# hat11_comparisons = [['HR8832', '2017-09-05T04:40:59.710'],  # Photosphere template
+#                      ['GJ9781A', '2016-09-18T06:31:41.670']]  # Spot template
+
+
+hat11_comparisons = [['HD145742', '2018-06-01T05:09:53.040'],  # Photosphere template
+                     ['GJ705', '2018-06-01T05:31:48.119']]  # Spot template
+
+
+stars = {'HATP11': hat11_comparisons}
 
 from json import load, dump
 
@@ -39,18 +50,19 @@ colors = load(open('colors.json', 'r'))
 roll_width = 10
 bands = bands_TiO#[:-1]
 yerr = 0.001
-force_refit = True
+force_refit = False # True
 
 # Set width where fitting will occur
-fit_width = 0*u.Angstrom
+fit_width = 0*u.Angstrom #1.5
 
 
-path = 'bandbyband_{0}_results.json'.format(star)
+path = 'bandbyband_h11_results.json'
 if os.path.exists(path) and not force_refit:
     results = load(open(path, 'r'))
 else:
     results = dict()
 
+star = 'HATP11'
 phot_temp = star_temps[star]
 
 comparison_temp_high = star_temps[stars[star][0][0]]
@@ -74,16 +86,15 @@ target_temp = star_temps[target_name]
 comp1_temp = star_temps[comp1_name]
 comp2_temp = star_temps[comp2_name]
 
-color_error = 0.02
+color_error = 0.03
 target_color = colors[target_name]
 comp1_color = colors[comp1_name]
 comp2_color = colors[comp2_name]
 
-
 # Load spectra from database
 times = list(archive[target_name])
 
-for time in times:
+for time in times[4:]:
     if time not in results or force_refit:
         spectrum1 = archive[target_name][time]
 
@@ -153,19 +164,15 @@ for time in times:
                 if np.isfinite(lnprior(realization)):
                     pos.append(realization)
 
-            # pool = MPIPool(loadbalance=True)
-            # if not pool.is_master():
-            #     pool.wait()
-            #     sys.exit(0)
 
             sampler = EnsembleSampler(nwalkers, ndim, lnprob, threads=8,
                                       args=(target_slices, source1_slices,
                                             source2_slices))
                                       #pool=pool)
 
-            sampler.run_mcmc(pos, 2000)
+            sampler.run_mcmc(pos, 1000)
 
-            samples = sampler.chain[:, 1000:, :].reshape((-1, ndim))
+            samples = sampler.chain[:, 500:, :].reshape((-1, ndim))
 
             samples[:, 0] *= R_lambda
 
@@ -176,17 +183,17 @@ for time in times:
             band_results['yerr'] = np.median(samples[:, 1])
 
             corner(samples, labels=['$f_S$', '$f$'])
-            plt.savefig('plots_eqvir/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
-                                                           time.replace(':', '_').replace('.', '_')),
+            plt.savefig('plots_h11/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
+                                                           time.replace(':', '_')),
                         bbox_inches='tight')
             plt.close()
 
-            fig, ax = plot_posterior_samples_for_paper(samples, target_slices, source1_slices,
-                                                       source2_slices, mixture_coefficient,
-                                                       source1_dlambdas, source2_dlambdas,
-                                                       band, inds, fit_width, star)
-            plt.savefig('plots_eqvir/{0}_{1}_{2}_fit.pdf'.format(star, int(band.core.value),
-                                                           time.replace(':', '_').replace('.', '_')),
+            fig, ax = plot_posterior_samples(samples, target_slices, source1_slices,
+                                             source2_slices, mixture_coefficient,
+                                             source1_dlambdas, source2_dlambdas,
+                                             band, inds, fit_width, star)
+            plt.savefig('plots_h11/{0}_{1}_{2}_fit.pdf'.format(star, int(band.core.value),
+                                                               time.replace(':', '_')),
                         bbox_inches='tight')
             plt.close()
             # fig.close()
