@@ -74,7 +74,7 @@ target_temp = star_temps[target_name]
 comp1_temp = star_temps[comp1_name]
 comp2_temp = star_temps[comp2_name]
 
-color_error = 0.02
+color_error = 1#0.04
 target_color = colors[target_name]
 comp1_color = colors[comp1_name]
 comp2_color = colors[comp2_name]
@@ -121,7 +121,8 @@ for time in times:
                 area, f = theta
                 f_S = area * R_lambda
 
-                net_color = (1 - f_S) * comp1_color + f_S * comp2_color
+                # net_color = (1 - f_S) * comp1_color + f_S * comp2_color
+                net_color = (1 - f_S) * target_color + f_S * comp2_color
 
                 if 0 <= f_S <= 1 and 0 < f: #lnf < 0:
                     return -0.5 * (net_color - target_color)**2/color_error**2
@@ -167,7 +168,12 @@ for time in times:
 
             samples = sampler.chain[:, 1000:, :].reshape((-1, ndim))
 
+
             samples[:, 0] *= R_lambda
+
+            f_S = samples[:, 0]
+
+            net_color = (1 - f_S) * target_color + f_S * comp2_color
 
             lower, m, upper = np.percentile(samples[:, 0], [16, 50, 84])
             band_results['f_S_lower'] = m - lower
@@ -175,7 +181,18 @@ for time in times:
             band_results['f_S_upper'] = upper - m
             band_results['yerr'] = np.median(samples[:, 1])
 
-            corner(samples, labels=['$f_S$', '$f$'])
+            samples = np.hstack([samples, net_color[:, np.newaxis]])
+
+            fig, ax = plt.subplots(3, 3)
+            corner(samples, fig=fig, labels=['$f_S$', '$f$', '$c$'])
+
+            axis = ax[-1, -1]
+            print(target_color, comp1_color, comp2_color)
+            axis.axvline(target_color, color='k', zorder=100)
+            axis.axvline(comp1_color, color='b', zorder=100)
+            axis.axvline(comp2_color, color='r', zorder=100)
+            axis.set_xlim([comp1_color-0.1, comp2_color+0.1])
+
             plt.savefig('plots_eqvir/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
                                                            time.replace(':', '_').replace('.', '_')),
                         bbox_inches='tight')
