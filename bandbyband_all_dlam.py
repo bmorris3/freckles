@@ -28,7 +28,7 @@ stars = load(open('stars.json', 'r'))
 roll_width = 15
 bands = bands_TiO#[:-1]
 yerr = 0.001
-color_error = 0.003 #0.04
+color_error = 2 * 0.003 #0.003
 force_refit = False #True
 
 # Set width where fitting will occur
@@ -41,7 +41,7 @@ if os.path.exists(path) and not force_refit:
 else:
     results = dict()
 
-for star in stars:
+for star in sorted(stars.keys()):
     if star not in results or force_refit:
         star_results = dict()
         phot_temp = star_temps[star]
@@ -102,20 +102,24 @@ for star in stars:
 
                 for inds, band in zip(target_slices.wavelength_splits, bands):
                     band_results = dict()
-                    R_lambda = (blackbody_lambda(band.core, comp1_temp) /
-                                blackbody_lambda(band.core, comp2_temp)).value
+                    R_lambda = (blackbody_lambda(band.core, comp2_temp) /
+                                blackbody_lambda(band.core, comp1_temp)).value
 
                     def random_in_range(min, max):
                         return (max-min)*np.random.rand(1)[0] + min
 
                     def lnprior(theta):
                         area, f, dlam = theta
-                        f_S = area * R_lambda
+                        # f_S = area * R_lambda
 
                         #net_color = (1 - f_S) * target_color + f_S * comp2_color
-                        net_color = (1 - area) * comp1_color + area * comp2_color
+                        # net_color = (1 - area) * comp1_color + area * comp2_color
 
-                        if 0 <= f_S <= 1 and 0 < f and -1 < dlam < 1:
+                        W_Q = (1 - area)/( area*R_lambda + (1 - area) )
+                        W_S = (area * R_lambda)/( area*R_lambda + (1 - area) )
+                        net_color = 2.5 * np.log10(W_Q * 10**(comp1_color/2.5) + W_S * 10**(comp2_color/2.5))
+                        # print(net_color, target_color)
+                        if 0 <= area <= 1 and 0 < f and -1 < dlam < 1:
                             return -0.5 * (net_color - target_color)**2/color_error**2
                         return -np.inf
 
@@ -149,12 +153,12 @@ for star in stars:
                     sampler = EnsembleSampler(nwalkers, ndim, lnprob, threads=8,
                                               args=(target_slices, source1_slices,
                                                     source2_slices))
-                    p0 = sampler.run_mcmc(pos, 100)[0]
+                    p0 = sampler.run_mcmc(pos, 2000)[0]
                     sampler.reset()
 
-                    sampler.run_mcmc(p0, 1000)
-
-                    samples = sampler.chain[:, 500:, :].reshape((-1, ndim))
+                    sampler.run_mcmc(p0, 2000)
+                    sampler.pool.close()
+                    samples = sampler.chain[:, 1000:, :].reshape((-1, ndim))
 
                     samples[:, 0] *= R_lambda
 
@@ -191,3 +195,5 @@ for star in stars:
                 results[star] = star_results
 
                 dump(results, open(path, 'w'), indent=4, sort_keys=True)
+# Old sigmaDraconis
+#
