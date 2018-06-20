@@ -38,7 +38,7 @@ def instr_model(observed_spectrum, model_phot, model_spot, spotted_area,
     # observed_spectrum = deepcopy(observed_spectrum)
     # observed_spectrum.convolve(kernel=kernel_0)
 
-    combined_spectrum = combine_spectra(model_phot, model_spot, spotted_area)
+    combined_spectrum = combine_spectra(model_phot, model_spot, spotted_area, 1)
     # combined_spectrum.convolve(kernel=kernel_0)
 
     # Apply wavelength correction just to red wavelengths:
@@ -82,7 +82,7 @@ def instr_model(observed_spectrum, model_phot, model_spot, spotted_area,
 
 def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
                        spotted_area, lam_offsets_0, lam_offsets_1, band,
-                       input_inds, width=1*u.Angstrom, uncertainty=None):
+                       input_inds, R, width=1*u.Angstrom, uncertainty=None):
 
     model_phot = deepcopy(model_phot)
     model_spot = deepcopy(model_spot)
@@ -112,11 +112,11 @@ def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
 
     # Create a mixture of the hotter and cooler atmospheres with the correct
     # effective temperature for the photosphere of the star
-    phot_mixture = combine_spectra(model_phot, model_spot, mixture_coeff)
+    phot_mixture = combine_spectra(model_phot, model_spot, mixture_coeff, R)
 
     # Then combine the composite template photosphere model with some more
     # of the cooler star component to represent starspot coverage
-    combined_spectrum = combine_spectra(phot_mixture, model_spot, spotted_area)
+    combined_spectrum = combine_spectra(phot_mixture, model_spot, spotted_area, R)
 
     combined_interp = combined_spectrum.interpolate(observed_spectrum.wavelength)# -
 
@@ -181,12 +181,14 @@ def match_spectra(observed_spectrum, comparison_spectrum,
 
     return comparison_scaled, residuals
 
-def combine_spectra(spectrum_phot, spectrum_spot, spotted_area):
+def combine_spectra(spectrum_phot, spectrum_spot, spotted_area, R):
     spectrum_spot_interp = np.interp(spectrum_phot.wavelength.value,
                                      spectrum_spot.wavelength.value,
                                      spectrum_spot.flux)
-    combined_flux = (spectrum_phot.flux * (1 - spotted_area) +
-                     spectrum_spot_interp * spotted_area)
+    # Eqn 1 of ONeal 2004
+    combined_flux = ((spectrum_phot.flux * (1 - spotted_area) +
+                     spectrum_spot_interp * spotted_area * R) /
+                     (spotted_area*R + (1-spotted_area)))
     return SimpleSpectrum(spectrum_phot.wavelength, combined_flux,
                           dispersion_unit=spectrum_phot.dispersion_unit)
 
@@ -261,15 +263,15 @@ def plot_posterior_samples(samples, target_slices, source1_slices, source2_slice
     return fig, ax
 
 def plot_posterior_samples_for_paper(samples, target_slices, source1_slices, source2_slices, mixture_coefficient,
-                                     source1_dlambdas, source2_dlambdas, band, inds, fit_width, star):
+                                     source1_dlambdas, source2_dlambdas, band, inds, fit_width, star, R):
     yerr_eff = np.median(samples[:, 1])
     fig, ax = plt.subplots(1, 2, figsize=(8, 3.5))# , sharey=True)
 
     nospots, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, 0,
-                                             source1_dlambdas, source2_dlambdas, band, inds,
+                                             source1_dlambdas, source2_dlambdas, band, inds, R,
                                              width=fit_width, uncertainty=yerr_eff)
     allspots, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, 1,
-                                              source1_dlambdas, source2_dlambdas, band, inds,
+                                              source1_dlambdas, source2_dlambdas, band, inds, R,
                                               width=fit_width, uncertainty=yerr_eff)
     min_ind, max_ind = inds
 
@@ -319,11 +321,11 @@ def plot_posterior_samples_for_paper(samples, target_slices, source1_slices, sou
     for k in range(n_random_draws):
         step = np.random.randint(0, samples.shape[0])
         random_step = samples[step, 0]
+        dlam = samples[step, 2]
         try:
-
             rand_model, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, random_step,#np.exp(random_step),
-                                                        source1_dlambdas, source2_dlambdas, band, inds,
-                                                        width=fit_width, uncertainty=yerr_eff)
+                                                        [i - dlam for i in source1_dlambdas], [i - dlam for i in source2_dlambdas], band, inds,
+                                                        R, width=fit_width, uncertainty=yerr_eff)
         except np.linalg.linalg.LinAlgError:
             pass
         for i, inds in enumerate(target_slices.wavelength_splits):
