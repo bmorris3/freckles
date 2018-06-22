@@ -34,9 +34,12 @@ archive = h5py.File('/Users/bmmorris/git/aesop/notebooks/spectra.hdf5', 'r+')
 #                      ['GJ9781A', '2016-09-18T06:31:41.670']]  # Spot template
 
 
-hat11_comparisons = [['HD145742', '2018-06-01T05:09:53.040'],  # Photosphere template
-                     ['GJ705', '2018-06-01T05:31:48.119']]  # Spot template
+# hat11_comparisons = [['HD145742', '2018-06-01T05:09:53.040'],  # Photosphere template
+#                      ['GJ705', '2018-06-01T05:31:48.119']]  # Spot template
 
+
+hat11_comparisons = [['HD5857', '2017-11-06T09:13:54.200'],  # Photosphere template
+                     ['GJ705', '2018-06-01T05:31:48.119']]  # Spot template
 
 stars = {'HATP11': hat11_comparisons}
 
@@ -88,7 +91,7 @@ target_temp = star_temps[target_name]
 comp1_temp = star_temps[comp1_name]
 comp2_temp = star_temps[comp2_name]
 
-color_error = 0.02
+color_error = 2 * 0.003
 target_color = colors[target_name]
 comp1_color = colors[comp1_name]
 comp2_color = colors[comp2_name]
@@ -132,15 +135,16 @@ for time in times[4:]:
 
             def lnprior(theta):
                 area, f, dlam = theta
-                f_S = area * R_lambda
+                # f_S = area * R_lambda
 
-                net_color = (1 - area) * comp1_color + area * comp2_color
-                # net_color = (1 - area) * target_color + area * comp2_color
+                #net_color = (1 - f_S) * target_color + f_S * comp2_color
+                # net_color = (1 - area) * comp1_color + area * comp2_color
 
-                color_bounds = [target_color, np.interp(target_temp, temps, bminusr)]
-                min_color = min(color_bounds)
-                max_color = max(color_bounds) # min_color - color_error < net_color < max_color + color_error
-                if 0 <= f_S <= 1 and 0 < f and -1 < dlam < 1: #lnf < 0:
+                W_Q = (1 - area)/( area*R_lambda + (1 - area) )
+                W_S = (area * R_lambda)/( area*R_lambda + (1 - area) )
+                net_color = 2.5 * np.log10(W_Q * 10**(comp1_color/2.5) + W_S * 10**(comp2_color/2.5))
+                # print(net_color, target_color)
+                if 0 <= area <= 1 and 0 < f and -1 < dlam < 1:
                     return -0.5 * (net_color - target_color)**2/color_error**2
                 return -np.inf
 
@@ -180,10 +184,11 @@ for time in times[4:]:
             p0 = sampler.run_mcmc(pos, 1000)[0]
             sampler.reset()
             sampler.run_mcmc(p0, 2000)
+            sampler.pool.close()
 
             samples = sampler.chain[:, 1000:, :].reshape((-1, ndim))
 
-            samples[:, 0] *= R_lambda
+            #samples[:, 0] *= R_lambda
 
             lower, m, upper = np.percentile(samples[:, 0], [16, 50, 84])
             band_results['f_S_lower'] = m - lower

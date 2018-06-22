@@ -10,7 +10,7 @@ import os
 import h5py
 from corner import corner
 from astropy.modeling.blackbody import blackbody_lambda
-from toolkit import (get_slices_dlambdas, bands_TiO, bands_off_TiO
+from toolkit import (get_slices_dlambdas, bands_TiO,
                      SimpleSpectrum, model_known_lambda,
                      plot_posterior_samples_for_paper)
 

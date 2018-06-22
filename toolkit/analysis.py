@@ -82,7 +82,8 @@ def instr_model(observed_spectrum, model_phot, model_spot, spotted_area,
 
 def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
                        spotted_area, lam_offsets_0, lam_offsets_1, band,
-                       input_inds, R, width=1*u.Angstrom, uncertainty=None):
+                       input_inds, R, width=1*u.Angstrom, uncertainty=None,
+                       diagnostic=False):
 
     model_phot = deepcopy(model_phot)
     model_spot = deepcopy(model_spot)
@@ -138,8 +139,9 @@ def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
     b = observed_spectrum.flux[i_min:i_max][in_range]
 
     Omega = np.diag(uncertainty**2 * np.ones_like(lam[in_range]))
-
     inv_Omega = np.linalg.inv(Omega)
+    if diagnostic:
+        print(a, inv_Omega, b)
     c = np.linalg.inv(a.T @ inv_Omega @ a) @ a.T @ inv_Omega @ b  # Ordinary least squares
 
     residuals = -0.5*np.sum((a @ c - b)**2/uncertainty**2 + np.log(uncertainty**2))# + np.log(2*np.pi))
@@ -323,21 +325,12 @@ def plot_posterior_samples_for_paper(samples, target_slices, source1_slices, sou
     for k in range(n_random_draws):
         step = np.random.randint(0, samples.shape[0])
         random_step = samples[step, 0]
-        # dlam = samples[step, 2]
-        try:
-            rand_model, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, random_step,#np.exp(random_step),
-                                                        # [i - dlam for i in source1_dlambdas], [i - dlam for i in source2_dlambdas], band, inds,
-                                                        source1_dlambdas,  source2_dlambdas, band, inds,
-                                                        R, width=fit_width, uncertainty=yerr_eff)
-        except np.linalg.linalg.LinAlgError:
-            pass
-        for i, inds in enumerate(target_slices.wavelength_splits):
-            min_ind, max_ind = inds
-            # for j in range(2):
-            ax[1].plot(target_slices.wavelength[min_ind:max_ind],
-                          rand_model[min_ind:max_ind], color='gray', alpha=0.05)#,
-                           #label='Mixture' if k == 0 and i == 0 and j == 0 else None)#, zorder=10)color='#389df7',
-    # ax[1].legend(loc='lower right')
+        rand_model, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, random_step,
+                                                    source1_dlambdas,  source2_dlambdas, band, inds,
+                                                    R, width=fit_width, uncertainty=yerr_eff)
+
+        ax[1].plot(target_slices.wavelength[min_ind:max_ind],
+                      rand_model[min_ind:max_ind], color='gray', alpha=0.05)#,
     ax[1].set_ylim([0.7, 1.1])
     for axis in fig.axes:
         for s in ['right', 'top']:
