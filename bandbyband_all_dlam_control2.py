@@ -10,7 +10,7 @@ import os
 import h5py
 from corner import corner
 from astropy.modeling.blackbody import blackbody_lambda
-from toolkit import (get_slices_dlambdas, bands_TiO, bands_off_TiO
+from toolkit import (get_slices_dlambdas, bands_off_TiO,
                      SimpleSpectrum, model_known_lambda,
                      plot_posterior_samples_for_paper)
 
@@ -26,16 +26,16 @@ stars = load(open('stars.json', 'r'))
 # Set additional width in angstroms centered on band core,
 # used for wavelength calibration
 roll_width = 15
-bands = bands_TiO#[:-1]
+bands = bands_off_TiO#[:-1]
 yerr = 0.001
 color_error = 2 * 0.003 #0.003
 force_refit = False #True
 
 # Set width where fitting will occur
-fit_width = 0*u.Angstrom
+fit_width = 10*u.Angstrom
 
 
-path = 'bandbyband_dlam_results.json'
+path = 'bandbyband_control2_results.json'
 if os.path.exists(path) and not force_refit:
     results = load(open(path, 'r'))
 else:
@@ -98,8 +98,8 @@ for star in sorted(stars.keys()):
                 slicesdlambdas = get_slices_dlambdas(bands, roll_width, target, source1, source2)
                 target_slices, source1_slices, source2_slices, source1_dlambdas, source2_dlambdas = slicesdlambdas
 
-                source1_dlambdas = [0]*len(bands)
-                source2_dlambdas = [0]*len(bands)
+                # source1_dlambdas = [0]*len(bands)
+                # source2_dlambdas = [0]*len(bands)
 
                 time_results = dict()
 
@@ -123,7 +123,7 @@ for star in sorted(stars.keys()):
                         net_color = 2.5 * np.log10(W_Q * 10**(comp1_color/2.5) + W_S * 10**(comp2_color/2.5))
                         # print(net_color, target_color)
                         if 0 <= area <= 1 and 0 < f: #  and -1 < dlam < 1:
-                            return -0.5 * (net_color - target_color)**2/color_error**2
+                            return 0.0 #-0.5 * (net_color - target_color)**2/color_error**2
                         return -np.inf
 
                     def lnlike(theta, target, source1, source2):
@@ -162,9 +162,9 @@ for star in sorted(stars.keys()):
                     p0 = sampler.run_mcmc(pos, 1000)[0]
                     sampler.reset()
 
-                    sampler.run_mcmc(p0, 2000)
+                    sampler.run_mcmc(p0, 1000)
                     sampler.pool.close()
-                    samples = sampler.chain[:, 1000:, :].reshape((-1, ndim))
+                    samples = sampler.chain[:, 500:, :].reshape((-1, ndim))
 
                     #samples[:, 0] *= R_lambda
 
@@ -175,7 +175,7 @@ for star in sorted(stars.keys()):
                     band_results['yerr'] = np.median(samples[:, 1])
 
                     corner(samples, labels=['$f_S$', '$f$'])#, '$\Delta \lambda$'])
-                    plt.savefig('plots/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
+                    plt.savefig('plots_control2/{0}_{1}_{2}.pdf'.format(star, int(band.core.value),
                                                                    time.replace(':', '_')),
                                 bbox_inches='tight')
                     plt.close()
@@ -189,7 +189,7 @@ for star in sorted(stars.keys()):
                     #                                  source2_slices, mixture_coefficient,
                     #                                  source1_dlambdas, source2_dlambdas,
                     #                                  band, inds, fit_width, star)
-                    plt.savefig('plots/{0}_{1}_{2}_fit.pdf'.format(star, int(band.core.value),
+                    plt.savefig('plots_control2/{0}_{1}_{2}_fit.pdf'.format(star, int(band.core.value),
                                                                    time.replace(':', '_')),
                                 bbox_inches='tight')
                     plt.close()

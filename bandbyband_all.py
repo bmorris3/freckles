@@ -122,9 +122,9 @@ for star in stars:
                         area, f = theta
                         model, residuals = model_known_lambda(target, source1, source2,
                                                               mixture_coefficient,
-                                                              area, source1_dlambdas,
-                                                              source2_dlambdas, band, inds,
-                                                              width=fit_width,
+                                                              area, [i - dlam for i in source1_dlambdas],
+                                                              [i - dlam for i in source2_dlambdas],
+                                                              band, inds, width=fit_width,
                                                               uncertainty=f)
                         return residuals
 

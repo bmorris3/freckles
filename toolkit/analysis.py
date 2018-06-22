@@ -142,7 +142,7 @@ def model_known_lambda(observed_spectrum, model_phot, model_spot, mixture_coeff,
     inv_Omega = np.linalg.inv(Omega)
     c = np.linalg.inv(a.T @ inv_Omega @ a) @ a.T @ inv_Omega @ b  # Ordinary least squares
 
-    residuals = -0.5*np.sum((a @ c - b)**2/uncertainty**2 + np.log(uncertainty**2) + np.log(2*np.pi))
+    residuals = -0.5*np.sum((a @ c - b)**2/uncertainty**2 + np.log(uncertainty**2))# + np.log(2*np.pi))
 
     combined_scaled[i_min:i_max] = a_all @ c
 
@@ -267,12 +267,14 @@ def plot_posterior_samples_for_paper(samples, target_slices, source1_slices, sou
     yerr_eff = np.median(samples[:, 1])
     fig, ax = plt.subplots(1, 2, figsize=(8, 3.5))# , sharey=True)
 
+    # slope_fit_width
+    slope_fit_width = 10 * u.Angstrom
     nospots, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, 0,
                                              source1_dlambdas, source2_dlambdas, band, inds, R,
-                                             width=fit_width, uncertainty=yerr_eff)
+                                             width=slope_fit_width, uncertainty=yerr_eff)
     allspots, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, 1,
                                               source1_dlambdas, source2_dlambdas, band, inds, R,
-                                              width=fit_width, uncertainty=yerr_eff)
+                                              width=slope_fit_width, uncertainty=yerr_eff)
     min_ind, max_ind = inds
 
     for j in range(2):
@@ -286,10 +288,10 @@ def plot_posterior_samples_for_paper(samples, target_slices, source1_slices, sou
 
         if j == 0:
             ax[j].plot(target_slices.wavelength[min_ind:max_ind],# + dlam1*u.Angstrom,
-                       nospots[min_ind:max_ind]/np.percentile(nospots[min_ind:max_ind], 98),
+                       nospots[min_ind:max_ind], #/np.percentile(nospots[min_ind:max_ind], 98),
                        color='DodgerBlue', lw=1, zorder=10, label='HD 6497')#, color='r')
             ax[j].plot(target_slices.wavelength[min_ind:max_ind],# + dlam2*u.Angstrom,
-                       allspots[min_ind:max_ind]/np.percentile(allspots[min_ind:max_ind], 98),
+                       allspots[min_ind:max_ind], #/np.percentile(allspots[min_ind:max_ind], 98),
                        color='r', lw=1, zorder=10, label='GJ 4099')#, color='r')
     ax[0].legend(loc='lower left')
     ax[0].axvspan((band.min-fit_width/2).value, (band.max+fit_width/2).value, alpha=0.05, color='k')
@@ -321,18 +323,19 @@ def plot_posterior_samples_for_paper(samples, target_slices, source1_slices, sou
     for k in range(n_random_draws):
         step = np.random.randint(0, samples.shape[0])
         random_step = samples[step, 0]
-        dlam = samples[step, 2]
+        # dlam = samples[step, 2]
         try:
             rand_model, residuals = model_known_lambda(target_slices, source1_slices, source2_slices, mixture_coefficient, random_step,#np.exp(random_step),
-                                                        [i - dlam for i in source1_dlambdas], [i - dlam for i in source2_dlambdas], band, inds,
+                                                        # [i - dlam for i in source1_dlambdas], [i - dlam for i in source2_dlambdas], band, inds,
+                                                        source1_dlambdas,  source2_dlambdas, band, inds,
                                                         R, width=fit_width, uncertainty=yerr_eff)
         except np.linalg.linalg.LinAlgError:
             pass
         for i, inds in enumerate(target_slices.wavelength_splits):
             min_ind, max_ind = inds
-            for j in range(2):
-                ax[1].plot(target_slices.wavelength[min_ind:max_ind],
-                              rand_model[min_ind:max_ind], color='gray', alpha=0.05)#,
+            # for j in range(2):
+            ax[1].plot(target_slices.wavelength[min_ind:max_ind],
+                          rand_model[min_ind:max_ind], color='gray', alpha=0.05)#,
                            #label='Mixture' if k == 0 and i == 0 and j == 0 else None)#, zorder=10)color='#389df7',
     # ax[1].legend(loc='lower right')
     ax[1].set_ylim([0.7, 1.1])
